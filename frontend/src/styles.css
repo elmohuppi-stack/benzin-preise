@@ -26,10 +26,16 @@ select {
   font: inherit;
 }
 
+button,
+input,
+select {
+  touch-action: manipulation;
+}
+
 .app-shell {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: clamp(0.75rem, 2.5vw, 1.25rem);
 }
 
 .top-bar {
@@ -37,6 +43,27 @@ select {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+}
+
+.location-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.city-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.city-form input {
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.65rem;
+  min-width: 230px;
+  background: #fff;
 }
 
 .top-bar h1 {
@@ -50,8 +77,15 @@ select {
   border: 1px solid var(--border);
   background: var(--panel);
   border-radius: 0.7rem;
-  padding: 0.55rem 0.8rem;
+  padding: 0.65rem 0.9rem;
   cursor: pointer;
+}
+
+.top-bar button:disabled,
+.panel-head button:disabled,
+.mobile-toggle button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .location-label {
@@ -87,6 +121,13 @@ select {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   margin-top: 0.8rem;
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 0.35rem;
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--bg) 82%, white);
+  backdrop-filter: blur(4px);
 }
 
 .mobile-toggle .active {
@@ -150,6 +191,7 @@ select {
   border: 1px solid var(--border);
   background: #fff;
   padding: 0.75rem;
+  min-height: 88px;
 }
 
 .station-card.selected {
@@ -162,6 +204,10 @@ select {
   justify-content: space-between;
   align-items: start;
   gap: 0.75rem;
+}
+
+.station-head strong {
+  overflow-wrap: anywhere;
 }
 
 .price {
@@ -195,7 +241,7 @@ select {
 
 .map-canvas {
   min-height: 250px;
-  height: 34vh;
+  height: clamp(260px, 34vh, 460px);
 }
 
 .map-sheet {
@@ -205,6 +251,21 @@ select {
   display: grid;
   gap: 0.25rem;
   background: #fff;
+  line-height: 1.35;
+}
+
+@media (max-width: 1023px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .location-controls {
+    width: 100%;
+  }
+
+  .location-controls > button {
+    min-width: 170px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -246,12 +307,106 @@ select {
     flex-direction: column;
   }
 
+  .location-controls {
+    width: 100%;
+  }
+
+  .city-form {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.45rem;
+  }
+
+  .city-form input {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .city-form button {
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
   .top-bar button,
+  .panel-head button,
+  .filters select,
   .mobile-toggle button {
     min-height: 44px;
+    font-size: 16px;
+  }
+
+  .location-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .location-controls > button {
+    width: 100%;
+  }
+
+  .location-label {
+    margin: 0.45rem 0 0.75rem;
+    font-size: 0.92rem;
+  }
+
+  .mobile-toggle {
+    top: env(safe-area-inset-top, 0);
+  }
+
+  .list-column,
+  .map-column {
+    padding: 0.7rem;
+    border-radius: 0.9rem;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+  }
+
+  .panel-head button {
+    width: 100%;
+  }
+
+  .station-card {
+    padding: 0.7rem;
+    min-height: 96px;
+  }
+
+  .station-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .price {
+    font-size: 1.02rem;
+  }
+
+  .station-sub {
+    line-height: 1.35;
+  }
+
+  .station-meta {
+    justify-content: space-between;
+    gap: 0.45rem;
+    font-size: 0.86rem;
   }
 
   .map-canvas {
-    height: 38vh;
+    min-height: 280px;
+    height: 42dvh;
+  }
+
+  .map-sheet {
+    font-size: 0.92rem;
+  }
+
+  .leaflet-popup-content {
+    margin: 0.55rem 0.65rem;
+    font-size: 0.92rem;
   }
 }

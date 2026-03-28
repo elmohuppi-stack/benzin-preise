@@ -81,9 +81,14 @@ export const mapStations = (stations, fuelType) =>
     dist: station.dist,
     isOpen: station.isOpen,
     prices: {
-      e5: station.e5,
-      e10: station.e10,
-      diesel: station.diesel,
-      selected: station[fuelType],
+      e5: typeof station.e5 === "number" ? station.e5 : null,
+      e10: typeof station.e10 === "number" ? station.e10 : null,
+      diesel: typeof station.diesel === "number" ? station.diesel : null,
+      selected:
+        typeof station[fuelType] === "number"
+          ? station[fuelType]
+          : typeof station.price === "number"
+            ? station.price
+            : null,
     },
   }));

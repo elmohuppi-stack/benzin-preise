@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchStations } from "./api";
+import { fetchStations, geocodeCity } from "./api";
 import { Filters } from "./components/Filters";
 import { MapPanel } from "./components/MapPanel";
 import { StationList } from "./components/StationList";
@@ -22,6 +22,8 @@ export const App = () => {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [position, setPosition] = useState({ lat: 52.52, lng: 13.405 });
+  const [cityQuery, setCityQuery] = useState("");
+  const [resolvingCity, setResolvingCity] = useState(false);
 
   const title = useMemo(() => {
     return `${stations.length} Treffer ${loading ? "- lade" : ""}`;
@@ -75,13 +77,48 @@ export const App = () => {
     );
   };
 
+  const searchByCity = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setResolvingCity(true);
+
+    try {
+      const result = await geocodeCity(cityQuery);
+      setCityQuery(result.name);
+      setPosition({ lat: result.lat, lng: result.lng });
+    } catch (cityError) {
+      const message =
+        cityError instanceof Error
+          ? cityError.message
+          : "Stadt konnte nicht gesucht werden";
+      setError(message);
+    } finally {
+      setResolvingCity(false);
+    }
+  };
+
   return (
     <div className="app-shell">
       <header className="top-bar">
         <h1>Benzinpreise in der Naehe</h1>
-        <button onClick={detectLocation} disabled={!geolocationEnabled}>
-          Standort nutzen
-        </button>
+        <div className="location-controls">
+          <button onClick={detectLocation} disabled={!geolocationEnabled}>
+            Standort nutzen
+          </button>
+
+          <form className="city-form" onSubmit={searchByCity}>
+            <input
+              type="text"
+              placeholder="Stadt eingeben, z.B. Berlin"
+              value={cityQuery}
+              onChange={(e) => setCityQuery(e.target.value)}
+              aria-label="Stadt"
+            />
+            <button type="submit" disabled={resolvingCity}>
+              {resolvingCity ? "Suche..." : "Stadt suchen"}
+            </button>
+          </form>
+        </div>
       </header>
 
       <p className="location-label">

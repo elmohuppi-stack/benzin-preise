@@ -34,3 +34,46 @@ export const fetchStations = async ({
 
   return response.json();
 };
+
+type GeocodeResult = {
+  lat: number;
+  lng: number;
+  name: string;
+};
+
+export const geocodeCity = async (city: string): Promise<GeocodeResult> => {
+  const query = city.trim();
+  if (!query) {
+    throw new Error("Bitte einen Stadtnamen eingeben");
+  }
+
+  const params = new URLSearchParams({
+    name: query,
+    count: "1",
+    language: "de",
+    format: "json",
+  });
+
+  const response = await fetch(
+    `https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("Stadt konnte nicht gesucht werden");
+  }
+
+  const data = (await response.json()) as {
+    results?: Array<{ latitude: number; longitude: number; name: string }>;
+  };
+
+  const first = data.results?.[0];
+  if (!first) {
+    throw new Error("Keine passende Stadt gefunden");
+  }
+
+  return {
+    lat: first.latitude,
+    lng: first.longitude,
+    name: first.name,
+  };
+};
