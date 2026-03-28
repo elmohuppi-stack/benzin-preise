@@ -1,0 +1,19 @@
+{
+  "name": "backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "build": "echo \"No build step for backend\"",
+    "lint": "echo \"No lint configured\""
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.1.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.4.2"
+  }
+}
