@@ -146,7 +146,12 @@ export const App = () => {
         <section
           className={`map-column ${viewMode === "list" ? "mobile-hidden" : ""}`}
         >
-          <MapPanel stations={stations} selectedId={selectedId} />
+          <MapPanel
+            stations={stations}
+            selectedId={selectedId}
+            position={position}
+            onSelect={setSelectedId}
+          />
         </section>
       </main>
     </div>

@@ -187,15 +187,15 @@ select {
   gap: 0.75rem;
 }
 
-.map-placeholder {
-  min-height: 250px;
+.map-canvas-wrap {
   border-radius: 0.8rem;
-  border: 1px dashed var(--border);
-  background: linear-gradient(135deg, #f4ead8 0%, #fce8de 100%);
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.map-canvas {
+  min-height: 250px;
+  height: 34vh;
 }
 
 .map-sheet {
@@ -223,6 +223,10 @@ select {
     display: block;
   }
 
+  .map-canvas {
+    height: 60vh;
+  }
+
   .list-column {
     display: block;
   }
@@ -245,5 +249,9 @@ select {
   .top-bar button,
   .mobile-toggle button {
     min-height: 44px;
+  }
+
+  .map-canvas {
+    height: 38vh;
   }
 }

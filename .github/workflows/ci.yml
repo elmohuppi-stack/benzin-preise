@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace
+        run: npm run build
+
+      - name: Start backend
+        run: |
+          cp backend/.env.example backend/.env
+          npm run start -w backend > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      - name: Wait for backend
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://localhost:3000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend healthcheck failed"
+          cat backend.log || true
+          exit 1
+
+      - name: Smoke test health endpoint
+        run: curl -fsS http://localhost:3000/health
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill "$(cat backend.pid)" || true
+          fi
