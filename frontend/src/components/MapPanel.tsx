@@ -70,11 +70,13 @@ export const MapPanel = ({
                 key={station.id}
                 position={[station.lat, station.lng]}
                 eventHandlers={{
-                  click: () => onSelect(station.id)
+                  click: () => onSelect(station.id),
                 }}
               >
                 <Popup>
-                  <strong>{station.name || station.brand || "Tankstelle"}</strong>
+                  <strong>
+                    {station.name || station.brand || "Tankstelle"}
+                  </strong>
                   <br />
                   {formatSelectedPrice(station.prices.selected)}
                 </Popup>
