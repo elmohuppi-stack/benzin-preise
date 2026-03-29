@@ -21,6 +21,12 @@ export const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stations, setStations] = useState<Station[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [ageMinutes, setAgeMinutes] = useState<number>(0);
+  const [responseSource, setResponseSource] = useState<
+    "cache" | "snapshot" | "upstream" | "stale" | null
+  >(null);
+  const [isStale, setIsStale] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [position, setPosition] = useState({ lat: 49.0489, lng: 8.2596 });
   const [cityQuery, setCityQuery] = useState("");
@@ -38,6 +44,35 @@ export const App = () => {
     return `${stations.length} Treffer ${loading ? "- lade" : ""}`;
   }, [stations.length, loading]);
 
+  const freshnessLabel = useMemo(() => {
+    if (!lastUpdated) {
+      return "Noch keine Daten geladen";
+    }
+
+    const timestamp = new Date(lastUpdated);
+    const local = Number.isNaN(timestamp.getTime())
+      ? lastUpdated
+      : timestamp.toLocaleString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+    const sourceLabel =
+      responseSource === "upstream"
+        ? "Live"
+        : responseSource === "snapshot"
+          ? "Snapshot"
+          : responseSource === "cache"
+            ? "Cache"
+            : responseSource === "stale"
+              ? "Stale"
+              : "Unbekannt";
+
+    return `Quelle: ${sourceLabel} - Update: ${local} - Alter: ${ageMinutes} min`;
+  }, [ageMinutes, lastUpdated, responseSource]);
+
   const loadStations = async () => {
     setLoading(true);
     setError(null);
@@ -52,6 +87,10 @@ export const App = () => {
       });
 
       setStations(response.stations);
+      setLastUpdated(response.lastUpdated);
+      setAgeMinutes(response.ageMinutes);
+      setResponseSource(response.source);
+      setIsStale(response.stale);
       setSelectedId(response.stations[0]?.id || null);
     } catch (loadError) {
       const message =
@@ -60,6 +99,10 @@ export const App = () => {
           : "Unerwarteter Fehler beim Laden";
       setError(message);
       setStations([]);
+      setLastUpdated(null);
+      setAgeMinutes(0);
+      setResponseSource(null);
+      setIsStale(false);
       setSelectedId(null);
     } finally {
       setLoading(false);
@@ -283,6 +326,9 @@ export const App = () => {
                 <span>{radius} km</span>
                 <span>{sortLabel}</span>
               </div>
+              <p className={`freshness-hint ${isStale ? "stale" : ""}`}>
+                {freshnessLabel}
+              </p>
             </div>
             <button onClick={() => void loadStations()} disabled={loading}>
               Aktualisieren

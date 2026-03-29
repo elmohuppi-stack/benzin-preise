@@ -21,7 +21,10 @@ export type Station = {
 };
 
 export type StationResponse = {
-  source: "cache" | "upstream";
+  source: "cache" | "snapshot" | "upstream" | "stale";
+  stale: boolean;
   count: number;
   stations: Station[];
+  lastUpdated: string;
+  ageMinutes: number;
 };

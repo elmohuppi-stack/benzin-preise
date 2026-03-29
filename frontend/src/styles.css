@@ -225,6 +225,17 @@ select {
   gap: 0.3rem;
 }
 
+.freshness-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: color-mix(in oklab, var(--text) 82%, #5c6570);
+}
+
+.freshness-hint.stale {
+  color: #8c2f23;
+  font-weight: 600;
+}
+
 .result-filters {
   display: flex;
   flex-wrap: wrap;

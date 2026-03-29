@@ -10,6 +10,8 @@ Monorepo mit Frontend (React + Vite) und Backend (Fastify API-Proxy zur Tankstel
 - Automatisches Nachladen bei Kartenbewegung und Zoom (inklusive Debounce)
 - Mobile-optimierte Bedienung mit kompaktem Header und Toggle fuer Suche/Filter
 - Kraftstofffilter fuer `Super E5`, `Super E10`, `Diesel`
+- Persistente Such-Snapshots mit 30-Minuten-Upstream-Sperre pro Suchparameter
+- Historische Preispunkte aus Such-Snapshots und optionalen Einzel-Refreshes
 
 ## Schnellstart
 
@@ -45,6 +47,7 @@ Wichtige Defaults im Frontend:
 
 - `GET /health`
 - `GET /api/stations?lat=...&lng=...&radius=5&fuel=e5&sort=price`
+- `GET /api/admin/stats` (Monitoring fuer Snapshot/Historie)
 
 ## Deployment Mit Railway
 
@@ -57,6 +60,7 @@ Das Projekt wird als zwei Services in Railway betrieben:
 
 - `NODE_ENV=production`
 - `PORT=3000`
+- `DATABASE_URL=<optional_postgres_url>`
 - `TANK_API_KEY=<api_key>`
 - `TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json`
 - `FRONTEND_ORIGIN=https://<web-domain>`
@@ -64,9 +68,20 @@ Das Projekt wird als zwei Services in Railway betrieben:
 - `UPSTREAM_RETRY_COUNT=2`
 - `UPSTREAM_RETRY_BASE_DELAY_MS=250`
 - `CACHE_TTL_SECONDS=60`
+- `UPSTREAM_MIN_REFRESH_MINUTES=10`
+- `SEARCH_STORAGE_DIR=./data`
+- `HISTORY_RETENTION_DAYS=30`
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `RATE_LIMIT_MAX_REQUESTS=90`
 - `REDIS_URL=<optional>`
+
+Der Backend-Service schreibt neue Upstream-Suchergebnisse als JSONL-Snapshots nach `SEARCH_STORAGE_DIR/search-snapshots.ndjson`. Fuer identische Suchparameter wird nur dann erneut beim Upstream angefragt, wenn der letzte gespeicherte Snapshot aelter als `UPSTREAM_MIN_REFRESH_MINUTES` ist. Wenn der Upstream ausfaellt, liefert das Backend den letzten gespeicherten Snapshot als stale Response weiter aus.
+
+Wenn `DATABASE_URL` gesetzt ist, speichert der Backend-Service dieselben Such-Snapshots und Preispunkte zusaetzlich in Postgres (`search_snapshots`, `station_price_points`). Der Historien-Endpunkt nutzt dann bevorzugt die Datenbank und faellt bei Problemen auf den Dateispeicher zurueck.
+
+`GET /api/stations` liefert zudem Metadaten zur Datenfrische: `source`, `stale`, `lastUpdated`, `ageMinutes`.
+
+`GET /api/admin/stats` liefert Kennzahlen zum Aufbau der Historie, unter anderem Anzahl gespeicherter Such-Snapshots, Anzahl Preis-Punkte und den Zeitstempel des letzten Upstream-Snapshots (Dateispeicher und optional Postgres).
 
 ### Frontend-Variablen (`web`)
 
