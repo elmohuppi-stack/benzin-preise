@@ -254,6 +254,14 @@ select {
   line-height: 1.35;
 }
 
+.price-grid {
+  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.7rem;
+  font-size: 0.93rem;
+}
+
 @media (max-width: 1023px) {
   .filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));

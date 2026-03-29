@@ -25,8 +25,8 @@ export const Filters = ({
           value={fuel}
           onChange={(e) => onFuelChange(e.target.value as FuelType)}
         >
-          <option value="e5">E5</option>
-          <option value="e10">E10</option>
+          <option value="e5">Super E5</option>
+          <option value="e10">Super E10</option>
           <option value="diesel">Diesel</option>
         </select>
       </label>

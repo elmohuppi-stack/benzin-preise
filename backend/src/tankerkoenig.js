@@ -5,6 +5,9 @@ const normalizeFuel = (fuel) => {
   return ["e5", "e10", "diesel"].includes(normalized) ? normalized : "e5";
 };
 
+const normalizePrice = (value) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
 export const fetchStationsWithRetry = async ({
   baseUrl,
   apiKey,
@@ -67,7 +70,61 @@ export const fetchStationsWithRetry = async ({
   return [];
 };
 
-export const mapStations = (stations, fuelType) =>
+export const fetchPricesByStationIdsWithRetry = async ({
+  baseUrl,
+  apiKey,
+  stationIds,
+  timeoutMs,
+  retryCount,
+  retryBaseDelayMs,
+}) => {
+  if (!apiKey || stationIds.length === 0) {
+    return {};
+  }
+
+  const params = new URLSearchParams({
+    ids: stationIds.join(","),
+    apikey: apiKey,
+  });
+
+  const url = `${baseUrl.replace(/\/$/, "")}/prices.php?${params.toString()}`;
+
+  let attempt = 0;
+  while (attempt <= retryCount) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new Error(`Upstream HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data?.ok || !data?.prices) {
+        throw new Error("Upstream Antwort ohne Preisdaten");
+      }
+
+      return data.prices;
+    } catch (error) {
+      clearTimeout(timeout);
+
+      if (attempt === retryCount) {
+        return {};
+      }
+
+      const backoffMs = retryBaseDelayMs * (attempt + 1);
+      await wait(backoffMs);
+      attempt += 1;
+    }
+  }
+
+  return {};
+};
+
+export const mapStations = (stations, fuelType, pricesByStationId = {}) =>
   stations.map((station) => ({
     id: station.id,
     name: station.name,
@@ -81,14 +138,14 @@ export const mapStations = (stations, fuelType) =>
     dist: station.dist,
     isOpen: station.isOpen,
     prices: {
-      e5: typeof station.e5 === "number" ? station.e5 : null,
-      e10: typeof station.e10 === "number" ? station.e10 : null,
-      diesel: typeof station.diesel === "number" ? station.diesel : null,
+      e5: normalizePrice(pricesByStationId?.[station.id]?.e5 ?? station.e5),
+      e10: normalizePrice(pricesByStationId?.[station.id]?.e10 ?? station.e10),
+      diesel: normalizePrice(
+        pricesByStationId?.[station.id]?.diesel ?? station.diesel,
+      ),
       selected:
-        typeof station[fuelType] === "number"
-          ? station[fuelType]
-          : typeof station.price === "number"
-            ? station.price
-            : null,
+        normalizePrice(pricesByStationId?.[station.id]?.[fuelType]) ??
+        normalizePrice(station[fuelType]) ??
+        normalizePrice(station.price),
     },
   }));

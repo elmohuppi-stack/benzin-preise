@@ -9,7 +9,7 @@ type ViewMode = "list" | "map";
 
 const defaultRadius = Number(import.meta.env.VITE_DEFAULT_RADIUS_KM || 5);
 const defaultFuel = (import.meta.env.VITE_DEFAULT_FUEL_TYPE ||
-  "e5") as FuelType;
+  "e10") as FuelType;
 const geolocationEnabled = import.meta.env.VITE_ENABLE_GEOLOCATION !== "false";
 
 export const App = () => {

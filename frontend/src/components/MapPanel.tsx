@@ -22,6 +22,9 @@ L.Icon.Default.mergeOptions({
 const formatSelectedPrice = (value: number | null) =>
   typeof value === "number" ? `${value.toFixed(3)} EUR` : "-";
 
+const formatFuelPrice = (value: number | null) =>
+  typeof value === "number" ? `${value.toFixed(3)} EUR` : "-";
+
 const Recenter = ({ center }: { center: [number, number] }) => {
   const map = useMap();
 
@@ -96,6 +99,15 @@ export const MapPanel = ({
           <span>
             Position: {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
           </span>
+
+          <div className="price-grid" aria-label="Aktuelle Kraftstoffpreise">
+            <span>Super E5</span>
+            <strong>{formatFuelPrice(selected.prices.e5)}</strong>
+            <span>Super E10</span>
+            <strong>{formatFuelPrice(selected.prices.e10)}</strong>
+            <span>Diesel</span>
+            <strong>{formatFuelPrice(selected.prices.diesel)}</strong>
+          </div>
         </div>
       ) : (
         <div className="map-sheet">
