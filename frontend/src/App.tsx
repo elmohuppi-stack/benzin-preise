@@ -30,7 +30,8 @@ export const App = () => {
   const [mapSearchTick, setMapSearchTick] = useState(0);
   const mapSearchDebounceRef = useRef<number | null>(null);
 
-  const fuelLabel = fuel === "e5" ? "Super E5" : fuel === "e10" ? "Super E10" : "Diesel";
+  const fuelLabel =
+    fuel === "e5" ? "Super E5" : fuel === "e10" ? "Super E10" : "Diesel";
   const sortLabel = sort === "price" ? "Preis" : "Entfernung";
 
   const title = useMemo(() => {
@@ -122,7 +123,10 @@ export const App = () => {
     setViewMode("map");
   };
 
-  const handleMapViewportChange = (nextPosition: { lat: number; lng: number }) => {
+  const handleMapViewportChange = (nextPosition: {
+    lat: number;
+    lng: number;
+  }) => {
     if (mapSearchDebounceRef.current !== null) {
       window.clearTimeout(mapSearchDebounceRef.current);
     }
@@ -146,7 +150,9 @@ export const App = () => {
         <div className="header-main">
           <div>
             <h1>Benzinpreise bei {locationLabel}.</h1>
-            <p className="header-subtitle">Kompakt vergleichen und direkt auf der Karte finden</p>
+            <p className="header-subtitle">
+              Kompakt vergleichen und direkt auf der Karte finden
+            </p>
           </div>
         </div>
 
@@ -185,11 +191,46 @@ export const App = () => {
             title="Standort nutzen"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              <line x1="12" y1="2.5" x2="12" y2="7" stroke="currentColor" strokeWidth="1.8" />
-              <line x1="12" y1="17" x2="12" y2="21.5" stroke="currentColor" strokeWidth="1.8" />
-              <line x1="2.5" y1="12" x2="7" y2="12" stroke="currentColor" strokeWidth="1.8" />
-              <line x1="17" y1="12" x2="21.5" y2="12" stroke="currentColor" strokeWidth="1.8" />
+              <circle
+                cx="12"
+                cy="12"
+                r="4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <line
+                x1="12"
+                y1="2.5"
+                x2="12"
+                y2="7"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <line
+                x1="12"
+                y1="17"
+                x2="12"
+                y2="21.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <line
+                x1="2.5"
+                y1="12"
+                x2="7"
+                y2="12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <line
+                x1="17"
+                y1="12"
+                x2="21.5"
+                y2="12"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
             </svg>
           </button>
         </div>

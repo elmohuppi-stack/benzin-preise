@@ -44,8 +44,7 @@ select {
   padding: 0.9rem;
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background:
-    linear-gradient(115deg, #fff9f2 0%, #fffefa 58%, #fdf5f0 100%);
+  background: linear-gradient(115deg, #fff9f2 0%, #fffefa 58%, #fdf5f0 100%);
 }
 
 .header-main {
