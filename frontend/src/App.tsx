@@ -21,7 +21,7 @@ export const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [position, setPosition] = useState({ lat: 52.52, lng: 13.405 });
+  const [position, setPosition] = useState({ lat: 49.0489, lng: 8.2596 });
   const [cityQuery, setCityQuery] = useState("");
   const [resolvingCity, setResolvingCity] = useState(false);
 
