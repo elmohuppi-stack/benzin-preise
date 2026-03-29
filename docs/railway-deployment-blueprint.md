@@ -85,7 +85,7 @@ Wenn du statt Vite ein Next.js-Frontend nutzt, Build/Start entsprechend auf `nex
 
 - `VITE_API_BASE_URL=https://<deine_api_domain>`
 - `VITE_DEFAULT_RADIUS_KM=5`
-- `VITE_DEFAULT_FUEL_TYPE=e5`
+- `VITE_DEFAULT_FUEL_TYPE=e10`
 - `VITE_ENABLE_GEOLOCATION=true`
 
 ## 6) Netz, CORS und Domains

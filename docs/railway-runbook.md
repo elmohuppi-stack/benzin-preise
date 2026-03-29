@@ -50,7 +50,7 @@ Beide Services verwenden jeweils die lokale `nixpacks.toml` Datei im Service-Ord
 
 - `VITE_API_BASE_URL=https://<api-domain>`
 - `VITE_DEFAULT_RADIUS_KM=5`
-- `VITE_DEFAULT_FUEL_TYPE=e5`
+- `VITE_DEFAULT_FUEL_TYPE=e10`
 - `VITE_ENABLE_GEOLOCATION=true`
 
 ## Domains
@@ -63,5 +63,5 @@ Beide Services verwenden jeweils die lokale `nixpacks.toml` Datei im Service-Ord
 1. Backend Health: `GET /health`
 2. Frontend laden und Standort setzen.
 3. Suchrequest pruefen:
-   - `GET /api/stations?lat=52.52&lng=13.405&radius=5&fuel=e5&sort=price`
+  - `GET /api/stations?lat=52.52&lng=13.405&radius=5&fuel=e10&sort=price`
 4. Karte und Liste zeigen Treffer.

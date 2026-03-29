@@ -8,8 +8,7 @@ import type { FuelType, Station } from "./types";
 type ViewMode = "list" | "map";
 
 const defaultRadius = Number(import.meta.env.VITE_DEFAULT_RADIUS_KM || 5);
-const defaultFuel = (import.meta.env.VITE_DEFAULT_FUEL_TYPE ||
-  "e10") as FuelType;
+const defaultFuel: FuelType = "e10";
 const geolocationEnabled = import.meta.env.VITE_ENABLE_GEOLOCATION !== "false";
 const mapSearchDebounceMs = 350;
 
