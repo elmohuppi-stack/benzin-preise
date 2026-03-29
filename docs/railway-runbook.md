@@ -18,6 +18,18 @@ Dieses Runbook beschreibt die konkrete Einrichtung in Railway fuer ein Monorepo 
 
 Beide Services verwenden jeweils die lokale `nixpacks.toml` Datei im Service-Ordner.
 
+Wenn `Root Directory` nicht gesetzt ist, baut Railway das Monorepo vom Repo-Root und CLI-Deploys mit `railway up --service ...` laufen in Fehler wie `No start command detected`. In der aktuell verlinkten Production-Umgebung stehen beide Services noch auf `rootDirectory: null`.
+
+Setze deshalb im Railway-Dashboard pro Service unter `Settings` mindestens eine der folgenden Varianten:
+
+1. Bevorzugt: `Root Directory` auf `backend` bzw. `frontend` setzen.
+2. Fallback ohne Root Directory:
+
+- `api` Build Command: `npm run build:api`
+- `api` Start Command: `npm run start:api`
+- `web` Build Command: `npm run build:web`
+- `web` Start Command: `npm run start:web`
+
 ## Build/Start auf Railway
 
 - Backend:
@@ -63,5 +75,7 @@ Beide Services verwenden jeweils die lokale `nixpacks.toml` Datei im Service-Ord
 1. Backend Health: `GET /health`
 2. Frontend laden und Standort setzen.
 3. Suchrequest pruefen:
-  - `GET /api/stations?lat=52.52&lng=13.405&radius=5&fuel=e10&sort=price`
+
+- `GET /api/stations?lat=52.52&lng=13.405&radius=5&fuel=e10&sort=price`
+
 4. Karte und Liste zeigen Treffer.
