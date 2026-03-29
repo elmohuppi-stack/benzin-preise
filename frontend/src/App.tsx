@@ -44,6 +44,9 @@ export const App = () => {
     return `${stations.length} Treffer ${loading ? "- lade" : ""}`;
   }, [stations.length, loading]);
 
+  const canRefresh = ageMinutes >= 10;
+  const minutesUntilRefresh = Math.max(0, 10 - ageMinutes);
+
   const freshnessLabel = useMemo(() => {
     if (!lastUpdated) {
       return "Noch keine Daten geladen";
@@ -67,11 +70,21 @@ export const App = () => {
           : responseSource === "cache"
             ? "Cache"
             : responseSource === "stale"
-              ? "Stale"
+              ? "Stale (Upstream offline)"
               : "Unbekannt";
 
-    return `Quelle: ${sourceLabel} - Update: ${local} - Alter: ${ageMinutes} min`;
-  }, [ageMinutes, lastUpdated, responseSource]);
+    if (canRefresh) {
+      return `${sourceLabel} - ${local} - ✓ Neue Preise verfügbar`;
+    }
+
+    return `${sourceLabel} - ${local} - Nächste Aktualisierung in ${minutesUntilRefresh} min`;
+  }, [
+    ageMinutes,
+    lastUpdated,
+    responseSource,
+    canRefresh,
+    minutesUntilRefresh,
+  ]);
 
   const loadStations = async () => {
     setLoading(true);
@@ -330,8 +343,17 @@ export const App = () => {
                 {freshnessLabel}
               </p>
             </div>
-            <button onClick={() => void loadStations()} disabled={loading}>
-              Aktualisieren
+            <button
+              onClick={() => void loadStations()}
+              disabled={loading || !canRefresh}
+              className={canRefresh ? "refresh-ready" : ""}
+              title={
+                canRefresh
+                  ? "Neue Preise verfügbar"
+                  : "Warte noch vor erneutem Abruf"
+              }
+            >
+              {canRefresh ? "🔄 Aktualisieren" : "Aktualisieren"}
             </button>
           </div>
 

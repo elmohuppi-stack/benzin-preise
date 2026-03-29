@@ -111,6 +111,13 @@ select {
   cursor: not-allowed;
 }
 
+.panel-head button.refresh-ready {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(182, 58, 43, 0.2);
+}
+
 .geo-btn {
   width: 46px;
   height: 46px;

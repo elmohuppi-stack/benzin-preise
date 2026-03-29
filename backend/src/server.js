@@ -92,7 +92,7 @@ app.get("/api/stations", async (request, reply) => {
   const lat = Number(request.query.lat);
   const lng = Number(request.query.lng);
   const radius = clamp(Number(request.query.radius || 5), 1, 25);
-  const fuel = (request.query.fuel || "e5").toLowerCase();
+  const fuel = (request.query.fuel || "e10").toLowerCase();
   const sort = request.query.sort === "dist" ? "dist" : "price";
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {

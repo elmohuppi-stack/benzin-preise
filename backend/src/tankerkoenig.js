@@ -1,8 +1,8 @@
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const normalizeFuel = (fuel) => {
-  const normalized = (fuel || "e5").toLowerCase();
-  return ["e5", "e10", "diesel"].includes(normalized) ? normalized : "e5";
+  const normalized = (fuel || "e10").toLowerCase();
+  return ["e5", "e10", "diesel"].includes(normalized) ? normalized : "e10";
 };
 
 const normalizePrice = (value) =>

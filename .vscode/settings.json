@@ -3,6 +3,7 @@
     "npm install": true,
     "git remote": true,
     "git add": true,
-    "git commit": true
+    "git commit": true,
+    "railway": true
   }
 }
