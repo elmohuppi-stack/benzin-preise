@@ -11,7 +11,7 @@ const priceLabel = (value: number | null) =>
 
 export const StationList = ({ stations, selectedId, onSelect }: Props) => {
   if (stations.length === 0) {
-    return <p className="state">Keine Treffer fuer diese Suche.</p>;
+    return <p className="state">Keine Treffer für diese Suche.</p>;
   }
 
   return (

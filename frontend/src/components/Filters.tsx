@@ -7,6 +7,7 @@ type Props = {
   onFuelChange: (fuel: FuelType) => void;
   onRadiusChange: (radius: number) => void;
   onSortChange: (sort: "price" | "dist") => void;
+  className?: string;
 };
 
 export const Filters = ({
@@ -16,9 +17,10 @@ export const Filters = ({
   onFuelChange,
   onRadiusChange,
   onSortChange,
+  className,
 }: Props) => {
   return (
-    <section className="filters" aria-label="Filter">
+    <section className={className || "filters"} aria-label="Filter">
       <label>
         Kraftstoff
         <select
