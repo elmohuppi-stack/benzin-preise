@@ -6,11 +6,12 @@ Diese Datei ist die praktische Schritt-fuer-Schritt-Anleitung fuer das Produktiv
 
 - 1 Hetzner Cloud VM
 - Docker + `docker compose`
-- `web` Container mit Caddy und statischem Frontend
-- `api` Container mit kleinem Node/Fastify-Backend
+- Host-`nginx` als zentraler Reverse Proxy fuer mehrere Apps
+- `web` Container mit statischem Frontend auf lokalem Port `3001`
+- `api` Container mit kleinem Node/Fastify-Backend auf lokalem Port `3002`
 - eigene Domain mit zwei Subdomains:
-  - `app.<deine-domain>`
-  - `api.<deine-domain>`
+  - `benzin.elmarhepp.de`
+  - `benzin-api.elmarhepp.de`
 
 ---
 
@@ -27,19 +28,19 @@ Du brauchst:
 
 ## 2. DNS einrichten
 
-Lege diese DNS-Eintraege an:
+Lege spaeter diese DNS-Eintraege an:
 
-| Typ | Host  | Ziel          |
-| --- | ----- | ------------- |
-| `A` | `app` | `<server-ip>` |
-| `A` | `api` | `<server-ip>` |
+| Typ | Host | Ziel |
+| --- | --- | --- |
+| `A` | `benzin` | `<server-ip>` |
+| `A` | `benzin-api` | `<server-ip>` |
 
 Beispiel:
 
-- `app.example.de` -> `203.0.113.10`
-- `api.example.de` -> `203.0.113.10`
+- `benzin.elmarhepp.de` -> `203.0.113.10`
+- `benzin-api.elmarhepp.de` -> `203.0.113.10`
 
-> Wichtig: Port `80` und `443` muessen auf dem Server erreichbar sein, damit Caddy automatisch TLS-Zertifikate anfordern kann.
+> Die DNS-Umstellung kann auch spaeter erfolgen. Fuer das erste Server-Setup reicht es, die App intern auf `127.0.0.1:3001` und `127.0.0.1:3002` erreichbar zu machen.
 
 ---
 
@@ -75,10 +76,10 @@ Optional sinnvoll:
 ## 4. Repository deployen
 
 ```bash
-mkdir -p /opt/benzin-preise
-cd /opt
+mkdir -p /var/www/benzin-preise
+cd /var/www
 git clone <repo-url> benzin-preise
-cd /opt/benzin-preise
+cd /var/www/benzin-preise
 ```
 
 Wenn das Repo privat ist, nutze SSH-Deploy-Keys.
@@ -97,8 +98,8 @@ nano .env
 Inhalt:
 
 ```env
-APP_DOMAIN=app.<deine-domain>
-API_DOMAIN=api.<deine-domain>
+APP_DOMAIN=benzin.elmarhepp.de
+API_DOMAIN=benzin-api.elmarhepp.de
 ```
 
 ### Backend `backend/.env.production`
@@ -125,7 +126,7 @@ CACHE_TTL_SECONDS=600
 RATE_LIMIT_WINDOW_SECONDS=60
 RATE_LIMIT_MAX_REQUESTS=90
 
-FRONTEND_ORIGIN=https://app.<deine-domain>
+FRONTEND_ORIGIN=https://benzin.elmarhepp.de
 ```
 
 ### Frontend `frontend/.env.production`
@@ -138,7 +139,7 @@ nano frontend/.env.production
 Inhalt:
 
 ```env
-VITE_API_BASE_URL=https://api.<deine-domain>
+VITE_API_BASE_URL=https://benzin-api.elmarhepp.de
 VITE_DEFAULT_RADIUS_KM=5
 VITE_DEFAULT_FUEL_TYPE=e10
 VITE_ENABLE_GEOLOCATION=true
@@ -151,7 +152,7 @@ VITE_ENABLE_GEOLOCATION=true
 Im Projektverzeichnis:
 
 ```bash
-cd /opt/benzin-preise
+cd /var/www/benzin-preise
 docker compose up -d --build
 ```
 
@@ -161,39 +162,87 @@ Container pruefen:
 docker compose ps
 docker compose logs --tail=100 api
 docker compose logs --tail=100 web
+curl http://127.0.0.1:3002/health
+curl -I http://127.0.0.1:3001
 ```
 
 ---
 
-## 7. Go-Live pruefen
+## 7. Nginx als zentralen Router konfigurieren
 
-### Healthcheck
+Die App selbst belegt keine oeffentlichen Ports mehr. Stattdessen leitet Host-`nginx` die Domains an die internen Containerports weiter.
 
-```bash
-curl -fsS https://api.<deine-domain>/health
-```
+### Beispiel-Nginx-Config
 
-### API-Test
+Datei z. B. unter:
 
 ```bash
-curl -fsS "https://api.<deine-domain>/api/stations?lat=49.0489&lng=8.2596&radius=5&fuel=e10&sort=price"
+/etc/nginx/sites-available/benzin-preise.conf
 ```
 
-### Frontend testen
+Inhalt:
 
-Im Browser:
+```nginx
+server {
+    listen 80;
+    server_name benzin.elmarhepp.de;
 
-- `https://app.<deine-domain>` oeffnen
-- Suche per Stadt testen
-- Karte und Trefferliste pruefen
-- Tankstellenpreise sichtbar?
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name benzin-api.elmarhepp.de;
+
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Danach aktivieren und reloaden:
+
+```bash
+ln -s /etc/nginx/sites-available/benzin-preise.conf /etc/nginx/sites-enabled/benzin-preise.conf
+nginx -t
+systemctl reload nginx
+```
+
+### Interner Test vor DNS-Go-Live
+
+```bash
+curl -H 'Host: benzin.elmarhepp.de' http://127.0.0.1/
+curl -H 'Host: benzin-api.elmarhepp.de' http://127.0.0.1/health
+```
+
+### Nach DNS-Umstellung
+
+```bash
+curl http://benzin-api.elmarhepp.de/health
+```
+
+Dann im Browser:
+
+- `http://benzin.elmarhepp.de`
+
+HTTPS kann danach in einem zweiten Schritt via Certbot oder bestehender Nginx-TLS-Konfiguration aktiviert werden.
 
 ---
 
 ## 8. Spaetere Updates deployen
 
 ```bash
-cd /opt/benzin-preise
+cd /var/www/benzin-preise
 git pull --ff-only
 docker compose up -d --build
 ```
@@ -212,7 +261,7 @@ docker compose logs -f web
 Wenn ein Deploy fehlschlaegt:
 
 ```bash
-cd /opt/benzin-preise
+cd /var/www/benzin-preise
 git log --oneline -n 5
 git checkout <stabiler-commit>
 docker compose up -d --build
@@ -222,14 +271,14 @@ docker compose up -d --build
 
 ## 10. Haeufige Fehlerquellen
 
-### TLS-Zertifikat wird nicht ausgestellt
+### Nginx liefert die App nicht aus
 
 Pruefe:
 
-- Domain zeigt wirklich auf die Hetzner-IP
-- Port `80` offen
-- Port `443` offen
-- kein anderer Webserver blockiert die Ports
+- `curl http://127.0.0.1:3001` liefert HTML
+- `curl http://127.0.0.1:3002/health` liefert JSON
+- `nginx -t` ist erfolgreich
+- die `server_name` Werte stimmen
 
 ### API liefert 503
 
@@ -242,9 +291,10 @@ Pruefe in `backend/.env.production`:
 
 Pruefe:
 
-- `VITE_API_BASE_URL=https://api.<deine-domain>`
-- `FRONTEND_ORIGIN=https://app.<deine-domain>`
+- `VITE_API_BASE_URL=https://benzin-api.elmarhepp.de` (spaeter) oder intern korrekt gesetzt
+- `FRONTEND_ORIGIN=https://benzin.elmarhepp.de`
 - `docker compose ps`
+- Nginx-Proxy zeigt auf `127.0.0.1:3002`
 
 ---
 
