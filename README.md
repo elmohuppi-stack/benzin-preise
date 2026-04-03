@@ -61,7 +61,7 @@ make stop
 
 ## Lokaler Start mit Docker
 
-Empfohlen, wenn du das spaetere Hetzner-Deployment moeglichst nah lokal pruefen willst.
+Optional, wenn du die Container lokal pruefen willst. Fuer normale Entwicklung ist `make start` meist angenehmer.
 
 1. Docker-Env-Dateien vorbereiten:
 
@@ -69,22 +69,33 @@ Empfohlen, wenn du das spaetere Hetzner-Deployment moeglichst nah lokal pruefen 
 make env-docker
 ```
 
-Dabei werden angelegt:
+2. Fuer einen sinnvollen lokalen Docker-Test diese Werte setzen:
 
-- `.env`
-- `backend/.env.production`
-- `frontend/.env.production`
+`backend/.env.production`
 
-Die lokalen Defaults sind auf diese Domains ausgelegt:
+```env
+NODE_ENV=production
+PORT=3000
+LOG_LEVEL=info
+TANK_API_KEY=<dein-echter-key>
+TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json
+REQUEST_TIMEOUT_MS=6000
+UPSTREAM_RETRY_COUNT=2
+UPSTREAM_RETRY_BASE_DELAY_MS=250
+CACHE_TTL_SECONDS=600
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_MAX_REQUESTS=90
+FRONTEND_ORIGIN=http://localhost:3001
+```
 
-- `APP_DOMAIN=app.localhost`
-- `API_DOMAIN=api.localhost`
+`frontend/.env.production`
 
-2. Wichtige Werte setzen:
-
-- In `backend/.env.production`: `TANK_API_KEY` setzen
-- `FRONTEND_ORIGIN=https://app.localhost`
-- `VITE_API_BASE_URL=https://api.localhost`
+```env
+VITE_API_BASE_URL=http://localhost:3002
+VITE_DEFAULT_RADIUS_KM=5
+VITE_DEFAULT_FUEL_TYPE=e10
+VITE_ENABLE_GEOLOCATION=true
+```
 
 3. Container starten:
 
@@ -100,12 +111,12 @@ docker compose up --build
 
 4. Lokal testen:
 
-- Frontend: `https://app.localhost`
-- Healthcheck: `https://api.localhost/health`
+- Frontend: `http://localhost:3001`
+- Healthcheck: `http://localhost:3002/health`
 - API-Test:
 
 ```bash
-curl -k "https://api.localhost/api/stations?lat=49.0489&lng=8.2596&radius=5&fuel=e10&sort=price"
+curl "http://localhost:3002/api/stations?lat=49.0489&lng=8.2596&radius=5&fuel=e10&sort=price"
 ```
 
 Stoppen:
@@ -143,21 +154,26 @@ Wichtige Defaults im Frontend:
 - `GET /health`
 - `GET /api/stations?lat=...&lng=...&radius=5&fuel=e5&sort=price`
 
-## Deployment mit Hetzner Cloud (vereinfacht)
+## Deployment mit Hetzner Cloud (aktueller Stand)
 
-Das Projekt ist jetzt auf eine einfache Zielarchitektur fuer Hetzner Cloud reduziert:
+Das produktive Setup wurde auf **Host-`nginx` + Docker Compose** vereinfacht:
 
-- `api`: kleines Node/Fastify-Backend aus `backend/`
-- `web`: statisches Frontend, gebaut aus `frontend/` und via Caddy ausgeliefert
-- `docker-compose.yml` am Repo-Root fuer den gesamten Start
+- Projektpfad auf dem Server: `/var/www/benzin-preise`
+- `web` Container liefert das statische Frontend auf `127.0.0.1:3001`
+- `api` Container liefert das Backend auf `127.0.0.1:3002`
+- der Host-`nginx` routet diese beiden internen Ports auf die Domains
+  - `benzin.elmarhepp.de`
+  - `benzin-api.elmarhepp.de`
 
 ### Backend-Variablen (`backend/.env.production`)
+
+Fuer den ersten HTTP-Go-Live:
 
 - `NODE_ENV=production`
 - `PORT=3000`
 - `TANK_API_KEY=<api_key>`
 - `TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json`
-- `FRONTEND_ORIGIN=https://app.<deine-domain>`
+- `FRONTEND_ORIGIN=http://benzin.elmarhepp.de`
 - `REQUEST_TIMEOUT_MS=6000`
 - `UPSTREAM_RETRY_COUNT=2`
 - `UPSTREAM_RETRY_BASE_DELAY_MS=250`
@@ -165,36 +181,35 @@ Das Projekt ist jetzt auf eine einfache Zielarchitektur fuer Hetzner Cloud reduz
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `RATE_LIMIT_MAX_REQUESTS=90`
 
+Nach spaeterer TLS-Aktivierung auf `https://...` umstellen.
+
 ### Frontend-Variablen (`frontend/.env.production`)
 
-- `VITE_API_BASE_URL=https://api.<deine-domain>`
+Fuer den ersten HTTP-Go-Live:
+
+- `VITE_API_BASE_URL=http://benzin-api.elmarhepp.de`
 - `VITE_DEFAULT_RADIUS_KM=5`
 - `VITE_DEFAULT_FUEL_TYPE=e10`
 - `VITE_ENABLE_GEOLOCATION=true`
 
-### Compose-Setup
-
-1. Domains in Root-Env eintragen:
+### Deploy-Befehle auf dem Server
 
 ```bash
-cp .env.example .env
-```
-
-2. Produktionsdateien anlegen:
-
-```bash
-cp backend/.env.example backend/.env.production
-cp frontend/.env.example frontend/.env.production
-```
-
-3. Werte anpassen und dann deployen:
-
-```bash
+ssh elmarhepp
+cd /var/www/benzin-preise
+git pull --ff-only
 docker compose up -d --build
 ```
 
-### Smoke-Test
+### Interne Smoke-Tests auf dem Server
 
-- `GET https://api.<deine-domain>/health`
-- `GET https://api.<deine-domain>/api/stations?lat=52.52&lng=13.405&radius=5&fuel=e10&sort=price`
-- Frontend aufrufen und Suche, Karte und Liste pruefen
+```bash
+curl http://127.0.0.1:3002/health
+curl -I http://127.0.0.1:3001
+```
+
+### Oeffentliche Tests nach DNS-Propagation
+
+- `http://benzin-api.elmarhepp.de/health`
+- `http://benzin.elmarhepp.de`
+- danach optional HTTPS aktivieren

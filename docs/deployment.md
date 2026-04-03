@@ -126,7 +126,7 @@ CACHE_TTL_SECONDS=600
 RATE_LIMIT_WINDOW_SECONDS=60
 RATE_LIMIT_MAX_REQUESTS=90
 
-FRONTEND_ORIGIN=https://benzin.elmarhepp.de
+FRONTEND_ORIGIN=http://benzin.elmarhepp.de
 ```
 
 ### Frontend `frontend/.env.production`
@@ -139,7 +139,7 @@ nano frontend/.env.production
 Inhalt:
 
 ```env
-VITE_API_BASE_URL=https://benzin-api.elmarhepp.de
+VITE_API_BASE_URL=http://benzin-api.elmarhepp.de
 VITE_DEFAULT_RADIUS_KM=5
 VITE_DEFAULT_FUEL_TYPE=e10
 VITE_ENABLE_GEOLOCATION=true
@@ -298,7 +298,17 @@ Pruefe:
 
 ---
 
-## 11. Repo-interne Referenzen
+## 11. HTTPS spaeter aktivieren
+
+Sobald die DNS-Eintraege weltweit sichtbar sind, kann HTTPS ueber den Host-`nginx` aktiviert werden, z. B. mit:
+
+```bash
+certbot --nginx -d benzin.elmarhepp.de -d benzin-api.elmarhepp.de
+```
+
+Danach in `backend/.env.production` und `frontend/.env.production` die Domainwerte von `http://...` auf `https://...` umstellen und einmal neu deployen.
+
+## 12. Repo-interne Referenzen
 
 - Detailplan: `docs/hetzner-deployment-plan.md`
 - Folge-Deployments: `docs/hetzner-followup-deployments-runbook.md`

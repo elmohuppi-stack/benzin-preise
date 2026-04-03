@@ -10,20 +10,20 @@
   - Einheitliche Node-Version dokumentiert
 - Aufwand: S
 
-### A2 Railway Services einrichten
+### A2 Hetzner + Docker Compose einrichten
 
-- Beschreibung: `web`, `api`, `redis` erstellen und verknuepfen.
+- Beschreibung: `web` und `api` per Docker Compose auf dem Host deployen.
 - Akzeptanzkriterien:
-  - Staging und Production vorhanden
-  - Auto-Deploy fuer develop/main aktiv
+  - Beide Container laufen stabil
+  - Deploy per `git pull` + `docker compose up -d --build` moeglich
 - Aufwand: M
 
-### A3 Domains + CORS
+### A3 Nginx, Domains + CORS
 
-- Beschreibung: Custom Domains setzen und CORS absichern.
+- Beschreibung: Host-`nginx` als zentralen Router konfigurieren und CORS absichern.
 - Akzeptanzkriterien:
   - Frontend kann API aufrufen
-  - Fremde Origins sind blockiert
+  - mehrere Apps koennen parallel ueber Subdomains betrieben werden
 - Aufwand: S
 
 ## Epic B: Backend API + Datenqualitaet
@@ -44,12 +44,12 @@
   - Sortierung nach Preis und Entfernung moeglich
 - Aufwand: M
 
-### B3 Caching mit Redis
+### B3 Caching im Minimal-Backend
 
-- Beschreibung: Request-basierter Cache mit TTL.
+- Beschreibung: In-Memory-Cache mit TTL fuer wiederholte Suchanfragen.
 - Akzeptanzkriterien:
   - Wiederholte Anfragen schneller
-  - Cache-Hit sichtbar im Log
+  - Cache-Hit sichtbar im Verhalten/Log
 - Aufwand: M
 
 ### B4 Rate-Limit + Healthcheck

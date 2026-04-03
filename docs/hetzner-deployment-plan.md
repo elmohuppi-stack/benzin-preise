@@ -1,99 +1,53 @@
 # Hetzner Cloud Deployment Plan
 
-## Zielbild
+## Aktuelle Zielarchitektur
 
-Deployment der App auf Hetzner Cloud mit einer bewusst einfachen Produktionsarchitektur:
+Die App wird auf Hetzner Cloud aktuell in einer einfachen Multi-App-Architektur betrieben:
 
-- 1 VM als Start (kostenguenstig und schnell)
-- kleines Node/Fastify-Backend fuer `GET /health` und `GET /api/stations`
-- statisches Frontend via Caddy
-- `docker-compose.yml` fuer den kompletten Start mit einem Befehl
-- kein Redis, kein Postgres, keine zusaetzliche Stateful-Infrastruktur
+- 1 VM mit Host-`nginx` als zentralem Router
+- Projektpfad: `/var/www/benzin-preise`
+- `web` Container auf `127.0.0.1:3001`
+- `api` Container auf `127.0.0.1:3002`
+- Domains:
+  - `benzin.elmarhepp.de`
+  - `benzin-api.elmarhepp.de`
 
-Dieses Setup ist auf wenig Betriebsaufwand ausgelegt und kann spaeter bei Bedarf erweitert werden.
+Das Backend ist bewusst klein gehalten: API-Key-Schutz, Validierung, Rate-Limit und In-Memory-Cache.
 
-## Architektur (MVP)
+## Server-Status
 
-- `app.<deine-domain>` -> `web` (Caddy + statisches Frontend)
-- `api.<deine-domain>` -> `web` (Caddy Reverse Proxy) -> `api` Container
-- nur zwei produktive Services: `web` und `api`
+Der interne Deploy ist bereits verifiziert:
 
-## Phase 1: Vorbereitung (Lokal)
+- `curl http://127.0.0.1:3002/health` -> OK
+- `curl -I http://127.0.0.1:3001` -> Frontend antwortet
 
-1. Domain-Strategie festlegen:
+## Benoetigte Server-Bausteine
 
-- `app.<deine-domain>` fuer Frontend
-- `api.<deine-domain>` fuer Backend
+1. Ubuntu-VM auf Hetzner
+2. Docker + Docker Compose
+3. Host-`nginx`
+4. DNS bei Spaceship fuer die beiden Subdomains
+5. spaeter optional HTTPS via Certbot
 
-2. Secrets sammeln:
+## Verzeichnisstruktur auf dem Server
 
-- `TANK_API_KEY`
+```bash
+/var/www/benzin-preise
+```
 
-3. Repo auf Produktionsbranch pruefen:
+Dort liegen Repo, `docker-compose.yml` und die Produktions-Env-Dateien.
 
-- `main` ist deploybar
-- Smoke-Tests lokal erfolgreich
+## Produktions-Umgebungsvariablen
 
-## Phase 2: Hetzner VM anlegen
+### `backend/.env.production`
 
-1. VM erstellen:
-
-- Ubuntu 24.04 LTS
-- Region in DE (niedrige Latenz)
-- 2 vCPU / 4 GB RAM als Startpunkt
-
-2. Basis-Hardening:
-
-- SSH Key statt Passwort
-- Root Login deaktivieren
-- Firewall aktivieren (nur 22, 80, 443)
-- Optional Fail2Ban
-
-3. Systempakete installieren:
-
-- Docker Engine
-- Docker Compose Plugin
-- Git
-
-## Phase 3: DNS einrichten
-
-1. A-Records setzen:
-
-- `app.<deine-domain>` -> VM IPv4
-- `api.<deine-domain>` -> VM IPv4
-
-2. TTL waehrend Migration auf 300 Sekunden setzen.
-
-## Phase 4: Server-Verzeichnis und Konfiguration
-
-1. Deployment-Verzeichnis erstellen, z. B.:
-
-- `/opt/benzin-preise`
-
-2. Projekt klonen:
-
-- `git clone <repo-url> /opt/benzin-preise`
-
-3. Compose-Domainwerte anlegen:
-
-- `/opt/benzin-preise/.env`
-
-Beispielwerte:
-
-- `APP_DOMAIN=app.<deine-domain>`
-- `API_DOMAIN=api.<deine-domain>`
-
-4. Datei fuer Backend-Env erstellen:
-
-- `/opt/benzin-preise/backend/.env.production`
-
-Beispielwerte:
+Fuer den ersten HTTP-Go-Live:
 
 - `NODE_ENV=production`
 - `PORT=3000`
 - `TANK_API_KEY=<api_key>`
 - `TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json`
-- `FRONTEND_ORIGIN=https://app.<deine-domain>`
+- `FRONTEND_ORIGIN=http://benzin.elmarhepp.de`
 - `REQUEST_TIMEOUT_MS=6000`
 - `UPSTREAM_RETRY_COUNT=2`
 - `UPSTREAM_RETRY_BASE_DELAY_MS=250`
@@ -101,126 +55,110 @@ Beispielwerte:
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `RATE_LIMIT_MAX_REQUESTS=90`
 
-5. Datei fuer Frontend-Env erstellen:
+Nach TLS-Aktivierung die Domainwerte auf `https://...` umstellen.
 
-- `/opt/benzin-preise/frontend/.env.production`
+### `frontend/.env.production`
 
-Beispielwerte:
+Fuer den ersten HTTP-Go-Live:
 
-- `VITE_API_BASE_URL=https://api.<deine-domain>`
+- `VITE_API_BASE_URL=http://benzin-api.elmarhepp.de`
 - `VITE_DEFAULT_RADIUS_KM=5`
 - `VITE_DEFAULT_FUEL_TYPE=e10`
 - `VITE_ENABLE_GEOLOCATION=true`
 
-## Phase 5: Container-Orchestrierung
+## Deployment-Ablauf
 
-Die benoetigten Dateien liegen bereits im Repo:
+### 1. Repo aktualisieren
 
-- `docker-compose.yml`
-- `backend/Dockerfile`
-- `frontend/Dockerfile`
-- `frontend/Caddyfile`
+```bash
+ssh elmarhepp
+cd /var/www/benzin-preise
+git pull --ff-only
+```
 
-1. Starten:
+### 2. Container starten oder aktualisieren
 
-- `docker compose up -d --build`
+```bash
+docker compose up -d --build
+```
 
-2. Was dabei passiert:
+### 3. Interne Smoke-Tests
 
-- `api` startet als kleines Node-Backend auf Port 3000
-- `web` baut das Frontend und liefert es via Caddy aus
-- Caddy kuemmert sich um HTTPS und routet `api.<deine-domain>` intern an `api:3000`
+```bash
+curl http://127.0.0.1:3002/health
+curl -I http://127.0.0.1:3001
+```
 
-## Phase 6: Erstabnahme (Smoke-Tests)
+## Host-Nginx Routing
 
-1. Backend Health:
+Beispiel fuer `/etc/nginx/sites-available/benzin-preise.conf`:
 
-- `GET https://api.<deine-domain>/health`
+```nginx
+server {
+    listen 80;
+    server_name benzin.elmarhepp.de;
 
-2. API Suche:
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 
-- `GET https://api.<deine-domain>/api/stations?lat=52.52&lng=13.405&radius=5&fuel=e10&sort=price`
+server {
+    listen 80;
+    server_name benzin-api.elmarhepp.de;
 
-3. Frontend:
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
 
-- `https://app.<deine-domain>` laden
-- Suche, Karte, Liste, Marker-Highlight pruefen
+Aktivieren:
 
-4. Frontend-Verhalten:
+```bash
+ln -sf /etc/nginx/sites-available/benzin-preise.conf /etc/nginx/sites-enabled/benzin-preise.conf
+nginx -t
+systemctl reload nginx
+```
 
-- Suche, Karte, Liste und Marker-Highlight pruefen
+## DNS bei Spaceship
 
-## Phase 7: CI/CD (empfohlen)
+Fuer `elmarhepp.de`:
 
-1. Deployment-Key erstellen:
+- `A benzin -> 178.104.142.181`
+- `A benzin-api -> 178.104.142.181`
 
-- dedizierter SSH Key fuer GitHub Actions
+## Oeffentliche Tests nach DNS-Propagation
 
-2. GitHub Secrets setzen:
+```bash
+curl http://benzin-api.elmarhepp.de/health
+```
 
-- `HETZNER_HOST`
-- `HETZNER_USER`
-- `HETZNER_SSH_KEY`
+Im Browser:
 
-3. Workflow:
+- `http://benzin.elmarhepp.de`
 
-- Trigger auf Push nach `main`
-- SSH auf VM
-- `git pull`
-- `docker compose up -d --build`
-- kurze Smoke-Checks
+## HTTPS spaeter aktivieren
 
-## Phase 8: Backup, Monitoring, Betrieb
+Sobald DNS weltweit sichtbar ist, kann HTTPS ueber Host-`nginx` aktiviert werden, z. B. mit:
 
-1. Backup:
+```bash
+certbot --nginx -d benzin.elmarhepp.de -d benzin-api.elmarhepp.de
+```
 
-- regelmaessiges Backup des Repos und der `.env.production` Werte
-- optional Snapshot/Backup der Hetzner-VM
-
-2. Monitoring:
-
-- Container-Restart-Policy aktivieren
-- Logs zentral sammeln (mindestens Docker Logs rotieren)
-- Uptime-Check fuer `/health`
-
-3. Alerting:
-
-- HTTP 5xx Schwelle
-- hohe Antwortzeiten
-
-## Phase 9: Rollback-Strategie
-
-1. Vor jedem Deploy:
-
-- git tag setzen oder Commit merken
-
-2. Rollback:
-
-- `git checkout <letzter-stabiler-tag>`
-- `docker compose up -d --build`
-
-3. Hinweis:
-
-- Es gibt keine externe Redis-/Postgres-Abhaengigkeit; ein Rollback ist dadurch unkompliziert.
-
-## Unterschiede zu Railway (Kurz)
-
-- Kein automatisches PaaS-Buildrouting, stattdessen Docker/Caddy selbst verwalten.
-- Domains, TLS, Deploy-Pipeline und Rollback liegen in eigener Verantwortung.
-- Mehr Kontrolle (Kosten/Setup), aber mehr Betriebsaufwand.
-
-## Go-Live Checkliste
-
-1. DNS zeigt auf Hetzner-IP.
-2. HTTPS-Zertifikate sind ausgestellt.
-3. `app` und `api` antworten produktiv.
-4. CORS passt (`FRONTEND_ORIGIN`).
-5. `docker compose ps` zeigt `api` und `web` als laufend.
-6. Backup-Job bzw. VM-Snapshot ist eingerichtet.
-7. Monitoring/Healthcheck aktiv.
+Danach die Env-Dateien auf `https://...` umstellen und die Container einmal neu bauen.
 
 ## Folge-Deployments
 
-Fuer alle weiteren Deployments nach dem Go-Live siehe:
+Siehe:
 
 - `docs/hetzner-followup-deployments-runbook.md`
+- `docs/deployment.md`

@@ -31,43 +31,47 @@
 - `backend/src/server.js`: API-Endpunkte
 - `backend/src/tankerkoenig.js`: Upstream-Integration und Mapping
 
-## Railway Setup
+## Aktuelles Hetzner Setup
 
-- Service `api`: Root Directory `backend`
-- Service `web`: Root Directory `frontend`
-- Optional zusaetzlich Redis-Service
+- Projektpfad auf dem Server: `/var/www/benzin-preise`
+- Host-`nginx` uebernimmt das Routing fuer mehrere Apps
+- Frontend laeuft intern auf `127.0.0.1:3001`
+- Backend laeuft intern auf `127.0.0.1:3002`
+- Oeffentliche Ziel-Domains:
+  - `benzin.elmarhepp.de`
+  - `benzin-api.elmarhepp.de`
 
-## Railway Variablen
+## Produktions-Variablen
 
-### api
+### api (`backend/.env.production`)
 
 - `NODE_ENV=production`
 - `PORT=3000`
 - `TANK_API_KEY=<api_key>`
 - `TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json`
-- `FRONTEND_ORIGIN=https://<web-domain>`
+- `FRONTEND_ORIGIN=http://benzin.elmarhepp.de` (spaeter `https://...`)
 - `REQUEST_TIMEOUT_MS=6000`
 - `UPSTREAM_RETRY_COUNT=2`
 - `UPSTREAM_RETRY_BASE_DELAY_MS=250`
-- `CACHE_TTL_SECONDS=60`
+- `CACHE_TTL_SECONDS=600`
 - `RATE_LIMIT_WINDOW_SECONDS=60`
 - `RATE_LIMIT_MAX_REQUESTS=90`
-- `REDIS_URL=<optional>`
 
-### web
+### web (`frontend/.env.production`)
 
-- `VITE_API_BASE_URL=https://<api-domain>`
+- `VITE_API_BASE_URL=http://benzin-api.elmarhepp.de` (spaeter `https://...`)
 - `VITE_DEFAULT_RADIUS_KM=5`
 - `VITE_DEFAULT_FUEL_TYPE=e10`
 - `VITE_ENABLE_GEOLOCATION=true`
 
 ## Deployment Ablauf
 
-1. Build lokal pruefen: `npm run build -w frontend`
-2. Deploy API: `railway up --service api`
-3. Deploy Web: `railway up --service web`
-4. Health pruefen: `https://<api-domain>/health`
-5. Frontend Funktion pruefen (Stadt, Standort, Karte, Liste, Filter)
+1. Lokal Build pruefen: `npm run build`
+2. Auf den Server: `ssh elmarhepp`
+3. Repo aktualisieren: `cd /var/www/benzin-preise && git pull --ff-only`
+4. Container neu bauen/starten: `docker compose up -d --build`
+5. Intern pruefen: `curl http://127.0.0.1:3002/health`
+6. Oeffentlich pruefen: `http://benzin-api.elmarhepp.de/health` und `http://benzin.elmarhepp.de`
 
 ## Bekannte Stolpersteine
 
