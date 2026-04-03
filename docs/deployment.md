@@ -30,9 +30,9 @@ Du brauchst:
 
 Lege spaeter diese DNS-Eintraege an:
 
-| Typ | Host | Ziel |
-| --- | --- | --- |
-| `A` | `benzin` | `<server-ip>` |
+| Typ | Host         | Ziel          |
+| --- | ------------ | ------------- |
+| `A` | `benzin`     | `<server-ip>` |
 | `A` | `benzin-api` | `<server-ip>` |
 
 Beispiel:
