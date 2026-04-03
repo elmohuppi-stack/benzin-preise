@@ -29,8 +29,8 @@ Du brauchst:
 
 Lege diese DNS-Eintraege an:
 
-| Typ | Host | Ziel |
-|---|---|---|
+| Typ | Host  | Ziel          |
+| --- | ----- | ------------- |
 | `A` | `app` | `<server-ip>` |
 | `A` | `api` | `<server-ip>` |
 
