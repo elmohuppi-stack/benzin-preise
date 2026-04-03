@@ -23,7 +23,7 @@ export const App = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [ageMinutes, setAgeMinutes] = useState<number>(0);
   const [responseSource, setResponseSource] = useState<
-    "cache" | "snapshot" | "upstream" | "stale" | null
+    "cache" | "upstream" | "stale" | null
   >(null);
   const [isStale, setIsStale] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,13 +64,11 @@ export const App = () => {
     const sourceLabel =
       responseSource === "upstream"
         ? "Live"
-        : responseSource === "snapshot"
-          ? "Snapshot"
-          : responseSource === "cache"
-            ? "Cache"
-            : responseSource === "stale"
-              ? "Stale (Upstream offline)"
-              : "Unbekannt";
+        : responseSource === "cache"
+          ? "Cache"
+          : responseSource === "stale"
+            ? "Stale (Upstream offline)"
+            : "Unbekannt";
 
     if (canRefresh) {
       return `${sourceLabel} - ${local} - ✓ Neue Preise verfügbar`;

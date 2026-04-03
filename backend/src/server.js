@@ -3,8 +3,6 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { config } from "./config.js";
 import { createCache } from "./cache.js";
-import { createHistoryDatabase } from "./historyDb.js";
-import { createSearchSnapshotStore } from "./searchStore.js";
 import {
   fetchPricesByStationIdsWithRetry,
   fetchStationsWithRetry,
@@ -13,7 +11,7 @@ import {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const roundCoord = (value) => Number(value).toFixed(3);
-const isStoredSearchRecord = (value) =>
+const isSearchRecord = (value) =>
   Boolean(
     value &&
     typeof value === "object" &&
@@ -34,18 +32,7 @@ const buildSearchResponse = (record, source, stale = false) => ({
 });
 
 const app = Fastify({ logger: { level: config.logLevel } });
-const cache = createCache({ redisUrl: config.redisUrl, logger: app.log });
-const searchStore = createSearchSnapshotStore({
-  storageDir: config.searchStorageDir,
-  logger: app.log,
-  minFetchIntervalMinutes: config.upstreamMinRefreshMinutes,
-  historyRetentionDays: config.historyRetentionDays,
-});
-const historyDb = createHistoryDatabase({
-  databaseUrl: config.databaseUrl,
-  logger: app.log,
-  historyRetentionDays: config.historyRetentionDays,
-});
+const cache = createCache({ logger: app.log });
 
 await app.register(cors, {
   origin: config.frontendOrigin,
@@ -57,36 +44,13 @@ await app.register(rateLimit, {
   timeWindow: `${config.rateLimitWindowSeconds} seconds`,
 });
 
-app.get("/health", async () => {
-  const [storage, database] = await Promise.all([
-    searchStore.getStorageInfo(),
-    historyDb.getInfo(),
-  ]);
-
-  return {
-    status: "ok",
-    cache: cache.kind,
-    searchStorage: storage,
-    database,
-    timestamp: new Date().toISOString(),
-  };
-});
-
-app.get("/api/admin/stats", async () => {
-  const [storageStats, databaseStats] = await Promise.all([
-    searchStore.getStats(),
-    historyDb.enabled
-      ? historyDb.getStats()
-      : Promise.resolve({ enabled: false }),
-  ]);
-
-  return {
-    timestamp: new Date().toISOString(),
-    minRefreshMinutes: config.upstreamMinRefreshMinutes,
-    storage: storageStats,
-    database: databaseStats,
-  };
-});
+app.get("/health", async () => ({
+  status: "ok",
+  service: "api",
+  cache: cache.kind,
+  uptimeSeconds: Math.round(process.uptime()),
+  timestamp: new Date().toISOString(),
+}));
 
 app.get("/api/stations", async (request, reply) => {
   const lat = Number(request.query.lat);
@@ -113,24 +77,13 @@ app.get("/api/stations", async (request, reply) => {
     fuel,
     sort,
   ].join(":");
-  const normalizedQuery = {
-    lat: Number(roundCoord(lat)),
-    lng: Number(roundCoord(lng)),
-    radius,
-    fuel,
-    sort,
-  };
 
   const cached = await cache.get(cacheKey);
-  if (isStoredSearchRecord(cached) && searchStore.isFresh(cached)) {
+  if (isSearchRecord(cached)) {
     return buildSearchResponse(cached, "cache");
   }
 
-  const latestStored = await searchStore.getLatestSearch(cacheKey);
-  if (latestStored && searchStore.isFresh(latestStored)) {
-    await cache.set(cacheKey, latestStored, config.cacheTtlSeconds);
-    return buildSearchResponse(latestStored, "snapshot");
-  }
+  const cachedStale = await cache.getStale(cacheKey);
 
   try {
     const stations = await fetchStationsWithRetry({
@@ -160,107 +113,36 @@ app.get("/api/stations", async (request, reply) => {
     });
 
     const mapped = mapStations(stations, fuel, pricesByStationId);
-    const stored = await searchStore.saveSearchResult({
-      cacheKey,
-      query: normalizedQuery,
+    const record = {
+      fetchedAtMs: Date.now(),
+      fetchedAt: new Date().toISOString(),
+      stationCount: mapped.length,
       stations: mapped,
-    });
+    };
 
-    if (historyDb.enabled) {
-      historyDb.saveSearchSnapshot(stored).catch((dbError) => {
-        app.log.warn(
-          { error: dbError },
-          "Postgres-Snapshot konnte nicht gespeichert werden",
-        );
-      });
-    }
-
-    await cache.set(cacheKey, stored, config.cacheTtlSeconds);
-
-    return buildSearchResponse(stored, "upstream");
+    await cache.set(cacheKey, record, config.cacheTtlSeconds);
+    return buildSearchResponse(record, "upstream");
   } catch (error) {
-    app.log.error({ error }, "Fehler bei Tankstellenabfrage");
+    const errorMessage =
+      error instanceof Error && error.message
+        ? error.message
+        : "Benzinpreisdienst aktuell nicht erreichbar";
 
-    if (latestStored) {
-      await cache.set(cacheKey, latestStored, config.cacheTtlSeconds);
-      return buildSearchResponse(latestStored, "stale", true);
+    app.log.error(
+      { err: error, errorMessage },
+      "Fehler bei Tankstellenabfrage",
+    );
+
+    if (isSearchRecord(cachedStale)) {
+      return buildSearchResponse(cachedStale, "stale", true);
     }
 
-    return reply.code(502).send({
-      error: "Benzinpreisdienst aktuell nicht erreichbar",
+    const statusCode = errorMessage.includes("TANK_API_KEY") ? 503 : 502;
+
+    return reply.code(statusCode).send({
+      error: errorMessage,
     });
   }
-});
-
-app.get("/api/stations/:id/history", async (request, reply) => {
-  const stationId = String(request.params.id || "").trim();
-  const days = clamp(
-    Number(request.query.days || 7),
-    1,
-    config.historyRetentionDays,
-  );
-  const refresh = String(request.query.refresh || "false") === "true";
-
-  if (!stationId) {
-    return reply.code(400).send({ error: "station id ist erforderlich" });
-  }
-
-  if (refresh) {
-    try {
-      const pricesByStationId = await fetchPricesByStationIdsWithRetry({
-        baseUrl: config.tankApiBaseUrl,
-        apiKey: config.tankApiKey,
-        stationIds: [stationId],
-        timeoutMs: config.requestTimeoutMs,
-        retryCount: config.retryCount,
-        retryBaseDelayMs: config.retryBaseDelayMs,
-      });
-
-      const snapshot = pricesByStationId?.[stationId];
-      if (snapshot) {
-        const point = await searchStore.saveStationPricePoint({
-          stationId,
-          prices: snapshot,
-        });
-
-        if (historyDb.enabled) {
-          historyDb
-            .saveStationPricePoint({
-              stationId,
-              prices: snapshot,
-              fetchedAt: point.fetchedAt,
-            })
-            .catch((dbError) => {
-              app.log.warn(
-                { error: dbError },
-                "Postgres-Refreshpunkt konnte nicht gespeichert werden",
-              );
-            });
-        }
-      }
-    } catch (error) {
-      app.log.warn(
-        { error, stationId },
-        "Preis-Refresh fuer Historie fehlgeschlagen",
-      );
-    }
-  }
-
-  if (historyDb.enabled) {
-    try {
-      const dbHistory = await historyDb.getHistory(stationId, days);
-      if (dbHistory && dbHistory.count > 0) {
-        return dbHistory;
-      }
-    } catch (error) {
-      app.log.warn(
-        { error, stationId },
-        "Postgres-Historie nicht verfuegbar, nutze Dateispeicher",
-      );
-    }
-  }
-
-  return searchStore.getHistory(stationId, days);
 });
 
 const start = async () => {

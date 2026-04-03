@@ -1,5 +1,8 @@
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const isMissingApiKey = (apiKey) =>
+  !apiKey || apiKey.trim() === "" || apiKey === "replace_with_real_key";
+
 const normalizeFuel = (fuel) => {
   const normalized = (fuel || "e10").toLowerCase();
   return ["e5", "e10", "diesel"].includes(normalized) ? normalized : "e10";
@@ -20,8 +23,10 @@ export const fetchStationsWithRetry = async ({
   retryCount,
   retryBaseDelayMs,
 }) => {
-  if (!apiKey) {
-    throw new Error("TANK_API_KEY fehlt");
+  if (isMissingApiKey(apiKey)) {
+    throw new Error(
+      "TANK_API_KEY fehlt oder ist noch auf dem Platzhalterwert gesetzt",
+    );
   }
 
   const params = new URLSearchParams({
@@ -50,7 +55,9 @@ export const fetchStationsWithRetry = async ({
 
       const data = await response.json();
       if (!data?.ok) {
-        throw new Error("Upstream Antwort ohne ok=true");
+        throw new Error(
+          data?.message || data?.error || "Upstream Antwort ohne ok=true",
+        );
       }
 
       return data.stations || [];
@@ -104,7 +111,9 @@ export const fetchPricesByStationIdsWithRetry = async ({
 
       const data = await response.json();
       if (!data?.ok || !data?.prices) {
-        throw new Error("Upstream Antwort ohne Preisdaten");
+        throw new Error(
+          data?.message || data?.error || "Upstream Antwort ohne Preisdaten",
+        );
       }
 
       return data.prices;

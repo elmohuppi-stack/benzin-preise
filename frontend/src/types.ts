@@ -21,7 +21,7 @@ export type Station = {
 };
 
 export type StationResponse = {
-  source: "cache" | "snapshot" | "upstream" | "stale";
+  source: "cache" | "upstream" | "stale";
   stale: boolean;
   count: number;
   stations: Station[];

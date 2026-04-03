@@ -1,0 +1,11 @@
+{$APP_DOMAIN} {
+    encode zstd gzip
+    root * /srv
+    try_files {path} /index.html
+    file_server
+}
+
+{$API_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy api:3000
+}

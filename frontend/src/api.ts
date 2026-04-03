@@ -25,11 +25,24 @@ export const fetchStations = async ({
     sort,
   });
 
-  const response = await fetch(
-    `${apiBaseUrl}/api/stations?${query.toString()}`,
-  );
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/api/stations?${query.toString()}`);
+  } catch {
+    throw new Error(
+      "API nicht erreichbar. Wenn Docker lokal laeuft, bitte https://api.localhost/health einmal im Browser oeffnen und das Zertifikat bestaetigen.",
+    );
+  }
+
   if (!response.ok) {
-    throw new Error("Fehler beim Laden der Tankstellen");
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+
+    throw new Error(
+      payload?.error ||
+        `Fehler beim Laden der Tankstellen (${response.status})`,
+    );
   }
 
   return response.json();

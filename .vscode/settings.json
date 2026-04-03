@@ -4,6 +4,7 @@
     "git remote": true,
     "git add": true,
     "git commit": true,
-    "railway": true
+    "railway": true,
+    "git push": true
   }
 }
