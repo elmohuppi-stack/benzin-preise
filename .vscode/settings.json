@@ -5,6 +5,10 @@
     "git add": true,
     "git commit": true,
     "railway": true,
-    "git push": true
+    "git push": true,
+    "npm --workspace frontend": true,
+    "printf": true,
+    "git config": true,
+    "ssh": true
   }
 }
