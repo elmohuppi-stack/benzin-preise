@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchStations, geocodeCity } from "./api";
 import { Filters } from "./components/Filters";
 import { MapPanel } from "./components/MapPanel";
@@ -11,7 +11,6 @@ type LegalPage = "app" | "impressum" | "datenschutz";
 const defaultRadius = Number(import.meta.env.VITE_DEFAULT_RADIUS_KM || 5);
 const defaultFuel: FuelType = "e10";
 const geolocationEnabled = import.meta.env.VITE_ENABLE_GEOLOCATION !== "false";
-const mapSearchDebounceMs = 350;
 
 const legalContact = {
   name: import.meta.env.VITE_LEGAL_NAME || "Elmar Hepp",
@@ -312,8 +311,6 @@ export const App = () => {
   const [locationLabel, setLocationLabel] = useState("Wörth am Rhein");
   const [resolvingCity, setResolvingCity] = useState(false);
   const [headerPanelOpen, setHeaderPanelOpen] = useState(false);
-  const [mapSearchTick, setMapSearchTick] = useState(0);
-  const mapSearchDebounceRef = useRef<number | null>(null);
 
   const fuelLabel =
     fuel === "e5" ? "Super E5" : fuel === "e10" ? "Super E10" : "Diesel";
@@ -431,23 +428,7 @@ export const App = () => {
     }
 
     void loadStations();
-  }, [
-    activePage,
-    fuel,
-    radius,
-    sort,
-    position.lat,
-    position.lng,
-    mapSearchTick,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      if (mapSearchDebounceRef.current !== null) {
-        window.clearTimeout(mapSearchDebounceRef.current);
-      }
-    };
-  }, []);
+  }, [activePage, fuel, radius, sort, position.lat, position.lng]);
 
   const detectLocation = () => {
     if (!geolocationEnabled || !navigator.geolocation) {
@@ -492,27 +473,6 @@ export const App = () => {
   const handleSelectStation = (stationId: string) => {
     setSelectedId(stationId);
     setViewMode("map");
-  };
-
-  const handleMapViewportChange = (nextPosition: {
-    lat: number;
-    lng: number;
-  }) => {
-    if (mapSearchDebounceRef.current !== null) {
-      window.clearTimeout(mapSearchDebounceRef.current);
-    }
-
-    mapSearchDebounceRef.current = window.setTimeout(() => {
-      setPosition((prev) => {
-        const sameLat = Math.abs(prev.lat - nextPosition.lat) < 0.00005;
-        const sameLng = Math.abs(prev.lng - nextPosition.lng) < 0.00005;
-        return sameLat && sameLng ? prev : nextPosition;
-      });
-
-      // Zoom-Änderungen können bei gleichem Zentrum auftreten, deshalb erzwingen wir dann einen Reload.
-      setMapSearchTick((value) => value + 1);
-      mapSearchDebounceRef.current = null;
-    }, mapSearchDebounceMs);
   };
 
   if (activePage !== "app") {
@@ -701,7 +661,6 @@ export const App = () => {
             position={position}
             onSelect={handleSelectStation}
             isActive={viewMode === "map"}
-            onViewportChange={handleMapViewportChange}
           />
         </section>
       </main>

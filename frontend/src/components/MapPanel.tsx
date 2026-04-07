@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import {
   CircleMarker,
@@ -8,7 +8,6 @@ import {
   Popup,
   TileLayer,
   useMap,
-  useMapEvents,
 } from "react-leaflet";
 import type { Station } from "../types";
 
@@ -18,7 +17,6 @@ type Props = {
   position: { lat: number; lng: number };
   onSelect: (id: string) => void;
   isActive: boolean;
-  onViewportChange: (position: { lat: number; lng: number }) => void;
 };
 
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -51,34 +49,6 @@ const Recenter = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
-const NotifyViewportChanges = ({
-  onViewportChange,
-}: {
-  onViewportChange: (position: { lat: number; lng: number }) => void;
-}) => {
-  const lastEventRef = useRef("");
-
-  const emitViewport = (map: L.Map) => {
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-    const signature = `${center.lat.toFixed(5)}:${center.lng.toFixed(5)}:${zoom}`;
-
-    if (lastEventRef.current === signature) {
-      return;
-    }
-
-    lastEventRef.current = signature;
-    onViewportChange({ lat: center.lat, lng: center.lng });
-  };
-
-  const map = useMapEvents({
-    moveend: () => emitViewport(map),
-    zoomend: () => emitViewport(map),
-  });
-
-  return null;
-};
-
 const InvalidateOnVisible = ({ isActive }: { isActive: boolean }) => {
   const map = useMap();
 
@@ -103,7 +73,6 @@ export const MapPanel = ({
   position,
   onSelect,
   isActive,
-  onViewportChange,
 }: Props) => {
   const selected =
     stations.find((station) => station.id === selectedId) || stations[0];
@@ -121,7 +90,6 @@ export const MapPanel = ({
         >
           <InvalidateOnVisible isActive={isActive} />
           <Recenter center={center} />
-          <NotifyViewportChanges onViewportChange={onViewportChange} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
