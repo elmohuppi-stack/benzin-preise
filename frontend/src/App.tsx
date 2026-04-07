@@ -6,13 +6,293 @@ import { StationList } from "./components/StationList";
 import type { FuelType, Station } from "./types";
 
 type ViewMode = "list" | "map";
+type LegalPage = "app" | "impressum" | "datenschutz";
 
 const defaultRadius = Number(import.meta.env.VITE_DEFAULT_RADIUS_KM || 5);
 const defaultFuel: FuelType = "e10";
 const geolocationEnabled = import.meta.env.VITE_ENABLE_GEOLOCATION !== "false";
 const mapSearchDebounceMs = 350;
 
+const legalContact = {
+  name: import.meta.env.VITE_LEGAL_NAME || "Elmar Hepp",
+  email: import.meta.env.VITE_LEGAL_EMAIL || "elmar.hepp@gmail.com",
+  addressLine1:
+    import.meta.env.VITE_LEGAL_ADDRESS_LINE_1 || "Richard-Wagner-Str. 25",
+  addressLine2:
+    import.meta.env.VITE_LEGAL_ADDRESS_LINE_2 || "76744 Wörth am Rhein",
+  country: import.meta.env.VITE_LEGAL_COUNTRY || "Deutschland",
+  contentResponsible:
+    import.meta.env.VITE_LEGAL_CONTENT_RESPONSIBLE || "Elmar Hepp",
+};
+
+const getLegalPageFromHash = (hash: string): LegalPage => {
+  if (hash === "#impressum") {
+    return "impressum";
+  }
+
+  if (hash === "#datenschutz") {
+    return "datenschutz";
+  }
+
+  return "app";
+};
+
+const SiteFooter = () => (
+  <footer className="app-footer">
+    <div>
+      <strong>Rechtliches & Quellen</strong>
+      <p>
+        Preisdaten via Tankerkönig, Kartendaten © OpenStreetMap-Mitwirkende,
+        Ortssuche via Open-Meteo.
+      </p>
+    </div>
+
+    <nav className="footer-links" aria-label="Rechtliche Informationen">
+      <a href="#impressum">Impressum</a>
+      <a href="#datenschutz">Datenschutz</a>
+    </nav>
+  </footer>
+);
+
+const LegalPageView = ({ page }: { page: Exclude<LegalPage, "app"> }) => {
+  const isImpressum = page === "impressum";
+
+  return (
+    <main className="legal-page">
+      <a className="back-link" href="#">
+        ← Zur Tankstellenübersicht
+      </a>
+
+      <article className="legal-card">
+        <p className="legal-eyebrow">Rechtliches</p>
+        <h1>{isImpressum ? "Impressum" : "Datenschutzerklärung"}</h1>
+        <p className="legal-note">
+          Stand: 07. April 2026. Die Kontaktdaten werden aus der
+          Frontend-Konfiguration geladen.
+        </p>
+
+        {isImpressum ? (
+          <>
+            <section className="legal-section">
+              <h2>Angaben gemäß § 5 DDG</h2>
+              <p>
+                {legalContact.name}
+                <br />
+                {legalContact.addressLine1}
+                <br />
+                {legalContact.addressLine2}
+                <br />
+                {legalContact.country}
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>Kontakt</h2>
+              <p>
+                E-Mail: {legalContact.email}
+                <br />
+                Website: benzin.elmarhepp.de
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>
+                Verantwortlich für redaktionelle Inhalte (§ 18 Abs. 2 MStV)
+              </h2>
+              <p>
+                {legalContact.contentResponsible}
+                <br />
+                {legalContact.addressLine1}
+                <br />
+                {legalContact.addressLine2}
+                <br />
+                {legalContact.country}
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>Quellen und Daten</h2>
+              <ul className="legal-list">
+                <li>Preisdaten: Tankerkönig</li>
+                <li>Kartenmaterial: OpenStreetMap</li>
+                <li>Ortssuche: Open-Meteo Geocoding API</li>
+              </ul>
+            </section>
+
+            <section className="legal-section">
+              <h2>Haftungshinweis</h2>
+              <p>
+                Die Inhalte dieses Angebots werden mit Sorgfalt erstellt. Für
+                Aktualität, Vollständigkeit und Richtigkeit der bereitgestellten
+                Informationen kann dennoch keine Gewähr übernommen werden.
+              </p>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="legal-section">
+              <h2>1. Verantwortliche Stelle</h2>
+              <p>
+                {legalContact.name}
+                <br />
+                {legalContact.addressLine1}
+                <br />
+                {legalContact.addressLine2}
+                <br />
+                {legalContact.country}
+                <br />
+                E-Mail: {legalContact.email}
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>2. Zweck der Datenverarbeitung</h2>
+              <p>
+                Diese Website zeigt Tankstellen und aktuelle Kraftstoffpreise in
+                Ihrer Umgebung an. Dafür werden technische Zugriffsdaten,
+                Suchangaben und – nur nach Ihrer Freigabe – Standortdaten
+                verarbeitet.
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>3. Verarbeitete Daten</h2>
+              <ul className="legal-list">
+                <li>
+                  Server-Logdaten wie IP-Adresse, Datum/Uhrzeit, angefragte URL
+                  und User-Agent zur sicheren Bereitstellung der Website.
+                </li>
+                <li>
+                  Suchparameter wie Ort, Koordinaten, Radius, Kraftstoffart und
+                  Sortierung zur Anzeige passender Tankstellen.
+                </li>
+                <li>
+                  Standortdaten nur dann, wenn Sie die Funktion „Standort
+                  nutzen“ in Ihrem Browser aktiv freigeben.
+                </li>
+              </ul>
+            </section>
+
+            <section className="legal-section">
+              <h2>4. Eingesetzte Dienste, Empfänger und Drittanbieter</h2>
+              <ul className="legal-list">
+                <li>
+                  <strong>OpenStreetMap:</strong> Zum Anzeigen der Karte werden
+                  Kartentiles von OpenStreetMap bzw. den eingebundenen
+                  Tile-Servern geladen. Dabei werden insbesondere Ihre
+                  IP-Adresse, Browser-Metadaten und die aufgerufene Seite
+                  technisch an diese Server übermittelt.
+                </li>
+                <li>
+                  <strong>Open-Meteo Geocoding API:</strong> Bei der Ortssuche
+                  wird der eingegebene Stadtname an den Geocoding-Dienst
+                  übermittelt, damit passende Ortskoordinaten ermittelt werden
+                  können.
+                </li>
+                <li>
+                  <strong>Tankerkönig:</strong> Für die Anzeige der
+                  Kraftstoffpreise werden Suchkoordinaten, Radius, Kraftstoffart
+                  und Sortierung über das eigene Backend an die
+                  Tankerkönig-Schnittstelle weitergegeben.
+                </li>
+                <li>
+                  <strong>Hosting bei Hetzner:</strong> Die technische
+                  Bereitstellung der Website erfolgt auf einem Server bei
+                  Hetzner Online GmbH. Dabei können im Rahmen des Hostings
+                  technisch notwendige Verbindungs- und Server-Logdaten
+                  verarbeitet werden.
+                </li>
+              </ul>
+              <p>
+                Soweit externe Dienste eingebunden sind, gelten zusätzlich die
+                Datenschutzinformationen der jeweiligen Anbieter. Je nach
+                technischer Auslieferung kann dabei nicht vollständig
+                ausgeschlossen werden, dass Daten auch an Empfänger außerhalb
+                der EU bzw. des EWR übermittelt werden.
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>5. Rechtsgrundlagen</h2>
+              <ul className="legal-list">
+                <li>
+                  Art. 6 Abs. 1 lit. f DSGVO für den sicheren und stabilen
+                  Betrieb der Website sowie die Bereitstellung der Suche.
+                </li>
+                <li>
+                  Art. 6 Abs. 1 lit. a DSGVO für die freiwillige Nutzung der
+                  Standortfreigabe.
+                </li>
+              </ul>
+            </section>
+
+            <section className="legal-section">
+              <h2>6. Speicherdauer</h2>
+              <p>
+                Zwischengespeicherte Suchergebnisse werden in diesem Projekt
+                aktuell nur kurzfristig – etwa für 10 Minuten – vorgehalten.
+                Server-Logs werden nur so lange gespeichert, wie dies für den
+                sicheren und störungsfreien Betrieb der Website erforderlich
+                ist. Soweit Daten direkt bei Drittanbietern verarbeitet werden,
+                richtet sich die Speicherdauer ergänzend nach deren jeweiligen
+                Datenschutzbestimmungen.
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>7. Ihre Rechte</h2>
+              <p>
+                Sie haben im Rahmen der gesetzlichen Vorgaben das Recht auf
+                Auskunft, Berichtigung, Löschung, Einschränkung der
+                Verarbeitung, Datenübertragbarkeit sowie Widerspruch gegen
+                bestimmte Verarbeitungen. Außerdem haben Sie das Recht, erteilte
+                Einwilligungen – etwa zur Standortfreigabe – jederzeit mit
+                Wirkung für die Zukunft zu widerrufen sowie sich bei einer
+                Datenschutzaufsichtsbehörde zu beschweren.
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>8. Cookies, Local Storage und Consent-Banner</h2>
+              <p>
+                Diese Website setzt derzeit keine Analyse- oder
+                Marketing-Cookies ein und verwendet nach aktuellem Stand auch
+                keine nicht erforderlichen Einträge in `localStorage` oder
+                `sessionStorage`. Deshalb wird aktuell kein Cookie-Consent-
+                Banner eingeblendet. Die Seite nutzt nur technisch erforderliche
+                Verbindungen und externe Anfragen für Karten-, Orts- und
+                Preisdaten. Falls künftig optionale Tracking- oder Marketing-
+                Dienste ergänzt werden, wird vor deren Aktivierung eine
+                entsprechende Einwilligung eingeholt.
+              </p>
+            </section>
+
+            <section className="legal-section">
+              <h2>9. Standortfreigabe und Widerruf</h2>
+              <p>
+                Die Nutzung der Funktion „Standort nutzen“ erfolgt
+                ausschließlich nach Ihrer ausdrücklichen Freigabe im Browser.
+                Sie können diese Berechtigung jederzeit in den Browser- oder
+                Geräteeinstellungen widerrufen oder künftig blockieren, ohne
+                dass die übrigen Funktionen der Website wesentlich eingeschränkt
+                werden.
+              </p>
+            </section>
+          </>
+        )}
+      </article>
+
+      <SiteFooter />
+    </main>
+  );
+};
+
 export const App = () => {
+  const [activePage, setActivePage] = useState<LegalPage>(() =>
+    typeof window !== "undefined"
+      ? getLegalPageFromHash(window.location.hash)
+      : "app",
+  );
   const [fuel, setFuel] = useState<FuelType>(defaultFuel);
   const [radius, setRadius] = useState<number>(defaultRadius);
   const [sort, setSort] = useState<"price" | "dist">("price");
@@ -45,6 +325,32 @@ export const App = () => {
 
   const canRefresh = ageMinutes >= 10;
   const minutesUntilRefresh = Math.max(0, 10 - ageMinutes);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncActivePage = () => {
+      setActivePage(getLegalPageFromHash(window.location.hash));
+    };
+
+    window.addEventListener("hashchange", syncActivePage);
+    return () => window.removeEventListener("hashchange", syncActivePage);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.title =
+      activePage === "impressum"
+        ? "Impressum – Benzinpreise"
+        : activePage === "datenschutz"
+          ? "Datenschutz – Benzinpreise"
+          : `Benzinpreise bei ${locationLabel}`;
+  }, [activePage, locationLabel]);
 
   const freshnessLabel = useMemo(() => {
     if (!lastUpdated) {
@@ -120,8 +426,20 @@ export const App = () => {
   };
 
   useEffect(() => {
+    if (activePage !== "app") {
+      return;
+    }
+
     void loadStations();
-  }, [fuel, radius, sort, position.lat, position.lng, mapSearchTick]);
+  }, [
+    activePage,
+    fuel,
+    radius,
+    sort,
+    position.lat,
+    position.lng,
+    mapSearchTick,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -196,6 +514,14 @@ export const App = () => {
       mapSearchDebounceRef.current = null;
     }, mapSearchDebounceMs);
   };
+
+  if (activePage !== "app") {
+    return (
+      <div className="app-shell">
+        <LegalPageView page={activePage} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -379,6 +705,8 @@ export const App = () => {
           />
         </section>
       </main>
+
+      <SiteFooter />
     </div>
   );
 };
