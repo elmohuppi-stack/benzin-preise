@@ -31,8 +31,6 @@ env:
 
 env-docker:
 	@if [ ! -f .env ]; then cp .env.example .env; echo ".env erstellt"; else echo ".env existiert bereits"; fi
-	@if [ ! -f backend/.env.production ]; then cp backend/.env.example backend/.env.production; echo "backend/.env.production erstellt"; else echo "backend/.env.production existiert bereits"; fi
-	@if [ ! -f frontend/.env.production ]; then cp frontend/.env.example frontend/.env.production; echo "frontend/.env.production erstellt"; else echo "frontend/.env.production existiert bereits"; fi
 
 start:
 	npm run dev

@@ -1,94 +1,36 @@
-# Deployment Guide (Hetzner Cloud)
+# 🚀 Deployment – benzin-preise
 
-Diese Datei ist die praktische Schritt-fuer-Schritt-Anleitung fuer das Produktiv-Deployment der App auf Hetzner Cloud.
+> **Standard-konform nach [deployment-standard.md](./deployment-standard.md)**
 
-## Zielarchitektur
+## Übersicht
 
-- 1 Hetzner Cloud VM
-- Docker + `docker compose`
-- Host-`nginx` als zentraler Reverse Proxy fuer mehrere Apps
-- `web` Container mit statischem Frontend auf lokalem Port `3001`
-- `api` Container mit kleinem Node/Fastify-Backend auf lokalem Port `3002`
-- eigene Domain mit zwei Subdomains:
-  - `benzin.elmarhepp.de`
-  - `benzin-api.elmarhepp.de`
+| Aspekt | Wert |
+|--------|------|
+| App-Slug | `benzin-preise` |
+| Frontend-Domain | `benzin.elmarhepp.de` |
+| API-Domain | `benzin-api.elmarhepp.de` |
+| Web-Port | `3001` |
+| API-Port | `3002` |
+| Netzwerk | `hetzner-network` (external) |
+| Server-Pfad | `/var/www/benzin-preise` |
 
----
+## Voraussetzungen
 
-## 1. Voraussetzungen
+- Hetzner-Server mit installiertem [Deployment-Standard](deployment-standard.md)
+- `deploy-app.sh` installiert (`/usr/local/bin/deploy-app.sh`)
+- `hetzner-network` existiert (`docker network create hetzner-network`)
 
-Du brauchst:
+## Deployment (Erstinstallation)
 
-1. eine Hetzner Cloud VM (empfohlen: Ubuntu 24.04, 2 vCPU, 4 GB RAM)
-2. eine Domain bei einem Registrar oder DNS-Anbieter
-3. deinen echten `TANK_API_KEY`
-4. SSH-Zugriff auf den Server
-
----
-
-## 2. DNS einrichten
-
-Lege spaeter diese DNS-Eintraege an:
-
-| Typ | Host         | Ziel          |
-| --- | ------------ | ------------- |
-| `A` | `benzin`     | `<server-ip>` |
-| `A` | `benzin-api` | `<server-ip>` |
-
-Beispiel:
-
-- `benzin.elmarhepp.de` -> `203.0.113.10`
-- `benzin-api.elmarhepp.de` -> `203.0.113.10`
-
-> Die DNS-Umstellung kann auch spaeter erfolgen. Fuer das erste Server-Setup reicht es, die App intern auf `127.0.0.1:3001` und `127.0.0.1:3002` erreichbar zu machen.
-
----
-
-## 3. Server vorbereiten
-
-Per SSH verbinden:
+### 1. Repository auf den Server klonen
 
 ```bash
-ssh root@<server-ip>
-```
-
-Docker und Git installieren:
-
-```bash
-apt update && apt upgrade -y
-apt install -y ca-certificates curl gnupg git
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt update
-apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-
-Optional sinnvoll:
-
-- UFW/Firewall aktivieren
-- nur `22`, `80`, `443` freigeben
-- Root-Login deaktivieren und normalen Deploy-User nutzen
-
----
-
-## 4. Repository deployen
-
-```bash
-mkdir -p /var/www/benzin-preise
 cd /var/www
 git clone <repo-url> benzin-preise
 cd /var/www/benzin-preise
 ```
 
-Wenn das Repo privat ist, nutze SSH-Deploy-Keys.
-
----
-
-## 5. Produktions-Env-Dateien anlegen
-
-### Root `.env`
+### 2. `.env` anlegen
 
 ```bash
 cp .env.example .env
@@ -98,94 +40,46 @@ nano .env
 Inhalt:
 
 ```env
-APP_DOMAIN=benzin.elmarhepp.de
-API_DOMAIN=benzin-api.elmarhepp.de
+# === Deployment (Pflicht) ===
+APP_SLUG=benzin-preise
+WEB_PORT=3001
+API_PORT=3002
+
+# === Tankerkoenig API ===
+TANK_API_KEY=<dein-echter-api-key>
 ```
 
-### Backend `backend/.env.production`
+### 3. Deployen
 
 ```bash
-cp backend/.env.example backend/.env.production
-nano backend/.env.production
+deploy-app.sh benzin-preise
 ```
 
-Empfohlener Inhalt:
-
-```env
-NODE_ENV=production
-PORT=3000
-LOG_LEVEL=info
-
-TANK_API_KEY=<dein-echter-key>
-TANK_API_BASE_URL=https://creativecommons.tankerkoenig.de/json
-REQUEST_TIMEOUT_MS=6000
-UPSTREAM_RETRY_COUNT=2
-UPSTREAM_RETRY_BASE_DELAY_MS=250
-
-CACHE_TTL_SECONDS=600
-RATE_LIMIT_WINDOW_SECONDS=60
-RATE_LIMIT_MAX_REQUESTS=90
-
-FRONTEND_ORIGIN=http://benzin.elmarhepp.de
-```
-
-### Frontend `frontend/.env.production`
+### 4. Container ins `hetzner-network` einbinden
 
 ```bash
-cp frontend/.env.example frontend/.env.production
-nano frontend/.env.production
+docker network connect hetzner-network benzin-preise_api-1
+docker network connect hetzner-network benzin-preise_web-1
 ```
 
-Inhalt:
-
-```env
-VITE_API_BASE_URL=http://benzin-api.elmarhepp.de
-VITE_DEFAULT_RADIUS_KM=5
-VITE_DEFAULT_FUEL_TYPE=e10
-VITE_ENABLE_GEOLOCATION=true
-```
-
----
-
-## 6. Deployment starten
-
-Im Projektverzeichnis:
+### 5. Nginx-Konfiguration
 
 ```bash
-cd /var/www/benzin-preise
-docker compose up -d --build
+sudo nano /etc/nginx/sites-available/benzin-preise.conf
 ```
 
-Container pruefen:
-
-```bash
-docker compose ps
-docker compose logs --tail=100 api
-docker compose logs --tail=100 web
-curl http://127.0.0.1:3002/health
-curl -I http://127.0.0.1:3001
-```
-
----
-
-## 7. Nginx als zentralen Router konfigurieren
-
-Die App selbst belegt keine oeffentlichen Ports mehr. Stattdessen leitet Host-`nginx` die Domains an die internen Containerports weiter.
-
-### Beispiel-Nginx-Config
-
-Datei z. B. unter:
-
-```bash
-/etc/nginx/sites-available/benzin-preise.conf
-```
-
-Inhalt:
+Inhalt (nach Standard aus deployment-standard.md Abschnitt 5.1):
 
 ```nginx
+# === FRONTEND ===
 server {
-    listen 80;
     server_name benzin.elmarhepp.de;
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/benzin.elmarhepp.de/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/benzin.elmarhepp.de/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -196,9 +90,15 @@ server {
     }
 }
 
+# === API ===
 server {
-    listen 80;
     server_name benzin-api.elmarhepp.de;
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/benzin.elmarhepp.de/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/benzin.elmarhepp.de/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3002;
@@ -208,107 +108,57 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+
+# === HTTP → HTTPS ===
+server {
+    listen 80;
+    server_name benzin.elmarhepp.de benzin-api.elmarhepp.de;
+    return 301 https://$host$request_uri;
+}
 ```
 
-Danach aktivieren und reloaden:
+Aktivieren:
 
 ```bash
-ln -s /etc/nginx/sites-available/benzin-preise.conf /etc/nginx/sites-enabled/benzin-preise.conf
-nginx -t
-systemctl reload nginx
+sudo ln -s /etc/nginx/sites-available/benzin-preise.conf /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-### Interner Test vor DNS-Go-Live
+### 6. SSL-Zertifikat
 
 ```bash
-curl -H 'Host: benzin.elmarhepp.de' http://127.0.0.1/
-curl -H 'Host: benzin-api.elmarhepp.de' http://127.0.0.1/health
+sudo certbot --nginx -d benzin.elmarhepp.de -d benzin-api.elmarhepp.de
 ```
 
-### Nach DNS-Umstellung
+### 7. Verifikation
 
 ```bash
-curl http://benzin-api.elmarhepp.de/health
+deploy-app.sh benzin-preise status
+curl -I https://benzin.elmarhepp.de/
+curl https://benzin-api.elmarhepp.de/health
 ```
 
-Dann im Browser:
-
-- `http://benzin.elmarhepp.de`
-
-HTTPS kann danach in einem zweiten Schritt via Certbot oder bestehender Nginx-TLS-Konfiguration aktiviert werden.
-
----
-
-## 8. Spaetere Updates deployen
+## Updates deployen
 
 ```bash
-cd /var/www/benzin-preise
-git pull --ff-only
-docker compose up -d --build
+deploy-app.sh benzin-preise
 ```
 
-Logs bei Problemen:
+## Logs ansehen
 
 ```bash
-docker compose logs -f api
-docker compose logs -f web
+deploy-app.sh benzin-preise logs
 ```
 
----
-
-## 9. Rollback
-
-Wenn ein Deploy fehlschlaegt:
+## Rollback
 
 ```bash
-cd /var/www/benzin-preise
-git log --oneline -n 5
-git checkout <stabiler-commit>
-docker compose up -d --build
+deploy-app.sh benzin-preise rollback
 ```
 
----
+## Bekannte Stolpersteine
 
-## 10. Haeufige Fehlerquellen
-
-### Nginx liefert die App nicht aus
-
-Pruefe:
-
-- `curl http://127.0.0.1:3001` liefert HTML
-- `curl http://127.0.0.1:3002/health` liefert JSON
-- `nginx -t` ist erfolgreich
-- die `server_name` Werte stimmen
-
-### API liefert 503
-
-Pruefe in `backend/.env.production`:
-
-- `TANK_API_KEY` gesetzt?
-- kein Platzhalterwert mehr?
-
-### Frontend kann API nicht erreichen
-
-Pruefe:
-
-- `VITE_API_BASE_URL=https://benzin-api.elmarhepp.de` (spaeter) oder intern korrekt gesetzt
-- `FRONTEND_ORIGIN=https://benzin.elmarhepp.de`
-- `docker compose ps`
-- Nginx-Proxy zeigt auf `127.0.0.1:3002`
-
----
-
-## 11. HTTPS spaeter aktivieren
-
-Sobald die DNS-Eintraege weltweit sichtbar sind, kann HTTPS ueber den Host-`nginx` aktiviert werden, z. B. mit:
-
-```bash
-certbot --nginx -d benzin.elmarhepp.de -d benzin-api.elmarhepp.de
-```
-
-Danach in `backend/.env.production` und `frontend/.env.production` die Domainwerte von `http://...` auf `https://...` umstellen und einmal neu deployen.
-
-## 12. Repo-interne Referenzen
-
-- Detailplan: `docs/hetzner-deployment-plan.md`
-- Folge-Deployments: `docs/hetzner-followup-deployments-runbook.md`
+- Bei Domainwechsel `FRONTEND_ORIGIN` im Backend aktualisieren und neu deployen
+- Historische Preisdaten sind upstream nicht retroaktiv verfügbar
+- Nach Migration auf `hetzner-network`: alte Default-Netzwerke mit `docker network prune` bereinigen
