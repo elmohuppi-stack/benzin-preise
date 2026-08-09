@@ -1,3 +1,20 @@
+# Bewusst OHNE hetzner-network.
+#
+# Bis zum 9. August 2026 hingen beide Dienste im geteilten Netz, obwohl diese
+# App gar keine Datenbank hat — es gibt nichts, wofür sie pg-shared bräuchte.
+# Der Preis dafür war hoch: Compose setzt den Servicenamen in jedem Netz als
+# Alias, also hießen im serverweiten hetzner-network zwei Container schlicht
+# "api" und "web". Damit waren zwei der sieben Allerweltsnamen belegt, die
+# ARCHITEKTUR.md 6.1 ausdrücklich verbietet, und die nächste App mit einem
+# Service "api" hätte sich denselben Namen geteilt — Dockers DNS rotiert dann
+# zwischen beiden, und Anfragen landen reihum in der falschen Anwendung.
+#
+# Genau das ist am 8. August passiert, als vier Container "app" hießen.
+#
+# Ohne die Angabe legt Compose ein eigenes Netz je Stack an. "api" und "web"
+# sind dort lokale Namen und kollidieren mit niemandem. Von außen ändert sich
+# nichts: erreichbar sind die Dienste über die veröffentlichten Ports auf
+# 127.0.0.1, an die der nginx des Hosts proxyt.
 services:
   api:
     build:
@@ -7,8 +24,6 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${API_PORT}:3000"
-    networks:
-      - hetzner-network
 
   web:
     build:
@@ -20,9 +35,3 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT}:80"
-    networks:
-      - hetzner-network
-
-networks:
-  hetzner-network:
-    external: true
