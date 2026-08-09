@@ -12,16 +12,32 @@ const defaultRadius = Number(import.meta.env.VITE_DEFAULT_RADIUS_KM || 5);
 const defaultFuel: FuelType = "e10";
 const geolocationEnabled = import.meta.env.VITE_ENABLE_GEOLOCATION !== "false";
 
+// Betreiberangaben kommen aus der Umgebung, nie aus dem Quelltext: sonst liegt
+// eine ladungsfähige Anschrift in einem öffentlichen Repository. Fehlt ein
+// Pflichtfeld, steht ein sichtbarer Platzhalter auf der Seite statt einer
+// leeren Zeile — ein unvollständiges Impressum soll auffallen.
+// Die Zugriffe stehen einzeln und ausgeschrieben da: Vite ersetzt
+// `import.meta.env.VITE_X` beim Build statisch, ein dynamischer Schlüssel
+// (`import.meta.env[key]`) wird nicht ersetzt und wäre in Produktion leer.
+const legalRequired = (key: string, value: unknown): string =>
+  value && String(value).trim() ? String(value).trim() : `[bitte ${key} setzen]`;
+
 const legalContact = {
-  name: import.meta.env.VITE_LEGAL_NAME || "Elmar Hepp",
-  email: import.meta.env.VITE_LEGAL_EMAIL || "elmar.hepp@gmail.com",
-  addressLine1:
-    import.meta.env.VITE_LEGAL_ADDRESS_LINE_1 || "Richard-Wagner-Str. 25",
-  addressLine2:
-    import.meta.env.VITE_LEGAL_ADDRESS_LINE_2 || "76744 Wörth am Rhein",
+  name: legalRequired("VITE_LEGAL_NAME", import.meta.env.VITE_LEGAL_NAME),
+  email: legalRequired("VITE_LEGAL_EMAIL", import.meta.env.VITE_LEGAL_EMAIL),
+  addressLine1: legalRequired(
+    "VITE_LEGAL_ADDRESS_LINE_1",
+    import.meta.env.VITE_LEGAL_ADDRESS_LINE_1,
+  ),
+  addressLine2: legalRequired(
+    "VITE_LEGAL_ADDRESS_LINE_2",
+    import.meta.env.VITE_LEGAL_ADDRESS_LINE_2,
+  ),
   country: import.meta.env.VITE_LEGAL_COUNTRY || "Deutschland",
-  contentResponsible:
-    import.meta.env.VITE_LEGAL_CONTENT_RESPONSIBLE || "Elmar Hepp",
+  contentResponsible: legalRequired(
+    "VITE_LEGAL_CONTENT_RESPONSIBLE",
+    import.meta.env.VITE_LEGAL_CONTENT_RESPONSIBLE,
+  ),
 };
 
 const getLegalPageFromHash = (hash: string): LegalPage => {
