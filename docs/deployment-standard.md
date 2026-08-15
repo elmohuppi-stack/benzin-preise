@@ -26,7 +26,7 @@ Aktuell hat fast jede App ein anderes Setup:
 | Aspekt | Aktuelle Lage |
 |--------|--------------|
 | Compose-Dateinamen | `docker-compose.yml`, `docker-compose.prod.yml`, `compose.prod.yaml`, `compose.yaml` |
-| Docker-Netzwerke | Jede App in eigenem default-Netzwerk, nur `wetter` nutzt `hetzner-network` |
+| Docker-Netzwerke | Jede App in eigenem default-Netzwerk, nur `wetter` nutzt `apps-net` |
 | .env-Layout | Mal Root, mal Subdirs, mal `.env.production`, mal `.env` |
 | container_name | Nur bei `mediathek` und `wetter` |
 | healthchecks | Nur bei `mediathek` |
@@ -97,7 +97,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - hetzner-network
+      - apps-net
 
   db:
     image: postgres:16-alpine
@@ -111,13 +111,13 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - hetzner-network
+      - apps-net
 
 volumes:
   data:
 
 networks:
-  hetzner-network:
+  apps-net:
     external: true
 ```
 
@@ -133,10 +133,10 @@ services:
     env_file: .env
     restart: unless-stopped
     networks:
-      - hetzner-network
+      - apps-net
 
 networks:
-  hetzner-network:
+  apps-net:
     external: true
 ```
 
@@ -146,18 +146,18 @@ networks:
 |-------|-----------|
 | ✅ Dateiname `docker-compose.yml` | Einheitlich, kein Raten |
 | ✅ Kein `container_name` | Docker-Compose generiert `slug-app-1`, das reicht |
-| ✅ `networks: hetzner-network` | Alle Apps im selben Netzwerk – Kommunikation möglich |
+| ✅ `networks: apps-net` | Alle Apps im selben Netzwerk – Kommunikation möglich |
 | ✅ `external: true` | Netzwerk existiert bereits auf dem Server |
 | ✅ `env_file: .env` | Eine zentrale Datei, kein `.env.production` |
 | ✅ Healthcheck für DB | Sauberes Dependency-Management |
 | ✅ Ports nur `127.0.0.1:` | Keine Exposition nach außen (Nginx macht das) |
 
-### 3.4 Alle Apps ohne DB auf `hetzner-network` umstellen
+### 3.4 Alle Apps ohne DB auf `apps-net` umstellen
 
 ```bash
 # Einmalig: Bestehende Apps zum Netzwerk hinzufügen
 for app in benzin-preise elmo-scanner finanzen mathe-quiz sari weather-history; do
-  docker network connect hetzner-network "${app}_app-1" 2>/dev/null || true
+  docker network connect apps-net "${app}_app-1" 2>/dev/null || true
 done
 ```
 
@@ -409,7 +409,7 @@ deploy-app.sh umami rollback  # Rollback zum vorherigen Commit
 
 - [ ] **docker-compose.yml** nach Standard (Abschnitt 3) erstellt
 - [ ] **.env** nach Standard (Abschnitt 4) erstellt – mit produktionstauglichen Werten
-- [ ] **Netzwerk** nutzt `hetzner-network` (external)
+- [ ] **Netzwerk** nutzt `apps-net` (external)
 - [ ] **Nginx-Config** nach Standard (Abschnitt 5) erstellt
 - [ ] **Nginx-Site aktiviert** (`ln -s sites-available → sites-enabled`)
 - [ ] **nginx -t** erfolgreich
@@ -453,7 +453,7 @@ services:
     env_file: .env
     restart: unless-stopped
     networks:
-      - hetzner-network
+      - apps-net
 
   db:
     image: postgres:16-alpine
@@ -467,13 +467,13 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - hetzner-network
+      - apps-net
 
 volumes:
   data:
 
 networks:
-  hetzner-network:
+  apps-net:
     external: true
 ```
 
@@ -529,7 +529,7 @@ Nicht alles auf einmal. Die Migration erfolgt in Phasen:
 ### Phase 1: Minimal (sofort, für jede App)
 
 - [ ] `deploy-app.sh` auf dem Server installieren
-- [ ] `docker compose` → `hetzner-network` hinzufügen (sofern nicht vorhanden)
+- [ ] `docker compose` → `apps-net` hinzufügen (sofern nicht vorhanden)
 - [ ] Compose-Datei auf `docker-compose.yml` umbenennen
 
 ### Phase 2: .env (diese Woche)
@@ -562,7 +562,7 @@ Nicht alles auf einmal. Die Migration erfolgt in Phasen:
 | 3012 | elmo-scanner (API) | eigenes |
 | 3021 | finanzen (Web) | eigenes |
 | 3022 | finanzen (API) | eigenes |
-| 3031 | wetter | `hetzner-network` ✅ |
+| 3031 | wetter | `apps-net` ✅ |
 | 3032 | weather-history (Backend) | eigenes |
 | 3033 | weather-history (Frontend) | eigenes |
 | 3041 | mathe-quiz (Web) | eigenes |
@@ -570,7 +570,7 @@ Nicht alles auf einmal. Die Migration erfolgt in Phasen:
 | 3051 | mediathek (Web) | eigenes (`appnet`) |
 | 3052 | mediathek (API) | eigenes (`appnet`) |
 | 3061 | sari | eigenes |
-| **3071** | **→ Umami** 🆕 | **`hetzner-network`** ✅ |
+| **3071** | **→ Umami** 🆕 | **`apps-net`** ✅ |
 
 ### Nächste freie Ports
 

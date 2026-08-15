@@ -11,14 +11,14 @@
 | API-Domain | `benzin-api.elmarhepp.de` |
 | Web-Port | `3001` |
 | API-Port | `3002` |
-| Netzwerk | `hetzner-network` (external) |
+| Netzwerk | `apps-net` (external) |
 | Server-Pfad | `/var/www/benzin-preise` |
 
 ## Voraussetzungen
 
 - Hetzner-Server mit installiertem [Deployment-Standard](deployment-standard.md)
 - `deploy-app.sh` installiert (`/usr/local/bin/deploy-app.sh`)
-- `hetzner-network` existiert (`docker network create hetzner-network`)
+- `apps-net` existiert (`docker network create apps-net`)
 
 ## Deployment (Erstinstallation)
 
@@ -55,11 +55,11 @@ TANK_API_KEY=<dein-echter-api-key>
 deploy-app.sh benzin-preise
 ```
 
-### 4. Container ins `hetzner-network` einbinden
+### 4. Container ins `apps-net` einbinden
 
 ```bash
-docker network connect hetzner-network benzin-preise_api-1
-docker network connect hetzner-network benzin-preise_web-1
+docker network connect apps-net benzin-preise_api-1
+docker network connect apps-net benzin-preise_web-1
 ```
 
 ### 5. Nginx-Konfiguration
@@ -161,4 +161,4 @@ deploy-app.sh benzin-preise rollback
 
 - Bei Domainwechsel `FRONTEND_ORIGIN` im Backend aktualisieren und neu deployen
 - Historische Preisdaten sind upstream nicht retroaktiv verfügbar
-- Nach Migration auf `hetzner-network`: alte Default-Netzwerke mit `docker network prune` bereinigen
+- Nach Migration auf `apps-net`: alte Default-Netzwerke mit `docker network prune` bereinigen

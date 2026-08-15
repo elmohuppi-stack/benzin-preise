@@ -1,9 +1,9 @@
-# Bewusst OHNE hetzner-network.
+# Bewusst OHNE apps-net.
 #
 # Bis zum 9. August 2026 hingen beide Dienste im geteilten Netz, obwohl diese
 # App gar keine Datenbank hat — es gibt nichts, wofür sie pg-shared bräuchte.
 # Der Preis dafür war hoch: Compose setzt den Servicenamen in jedem Netz als
-# Alias, also hießen im serverweiten hetzner-network zwei Container schlicht
+# Alias, also hießen im serverweiten apps-net zwei Container schlicht
 # "api" und "web". Damit waren zwei der sieben Allerweltsnamen belegt, die
 # ARCHITEKTUR.md 6.1 ausdrücklich verbietet, und die nächste App mit einem
 # Service "api" hätte sich denselben Namen geteilt — Dockers DNS rotiert dann
